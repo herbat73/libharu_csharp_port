@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "csharp", "csharp", "{B41BF331-FCCB-2ADF-CDB6-767964B34647}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibHaru", "csharp\LibHaru\LibHaru.csproj", "{4D221DE5-21D9-446D-B606-E6AE990FA2EA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibHaru.SmokeTests", "csharp\LibHaru.SmokeTests\LibHaru.SmokeTests.csproj", "{6A823F04-C501-4598-A365-7BD5E07AB48B}"
@@ -47,8 +45,7 @@ Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{4D221DE5-21D9-446D-B606-E6AE990FA2EA} = {B41BF331-FCCB-2ADF-CDB6-767964B34647}
-		{6A823F04-C501-4598-A365-7BD5E07AB48B} = {B41BF331-FCCB-2ADF-CDB6-767964B34647}
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5626E2DA-CCCA-4E03-B233-A2F382AEE2B2}
 	EndGlobalSection
 EndGlobal

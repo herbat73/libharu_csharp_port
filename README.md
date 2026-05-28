@@ -6,6 +6,8 @@
 
   **Copyright 2007-2009 (c) Antony Dovgal et al.**
 
+  **Copyright 2026 (c) Port to C# Adam Adamczyk + Codex with ChatGPT 5.5 model**
+
 See INSTALL for instructions on how to install libHaru.
 
 
@@ -27,70 +29,10 @@ You can add the feature of PDF creation by using Haru without understanding
 complicated internal structure of PDF.
 
 
-# The differences from the previous version 
+# The differences from the orginal version 
 
 
-The biggest differences are that all code is written in C. 
-To our regret, because internal structures changed greatly, The API is not 
-compatible with previous version.
-
-However, the new-version has the following advantages compared with the 
-previous version.
-
- 1. Supported shared-library build.
-    A new-version library is able to be built as shared-library.
- 2. The performance has been greatly improved.
-    A new-version library is about 4-15 times faster than a previous version. 
- 3. Supported more features.
-    TrueType font, 128 bit encryption, arc function, and so on.
-
-
-# Supporting platforms
-
-Haru is written in ANSI-C and should compile easily with any compliant C 
-compiler.
-I inspected Haru in the following environment and make files for these 
-environments are included in a package.
-
-   1. Cygwin + GCC (Microsoft Windows)
-   2. Cygwin + MinGW (Microsoft Windows)
-   3. MSYS + MinGW (Microsoft Windows)
-   3. Microsoft VC++ (Microsoft Windows)
-   4. Borland C++ (Microsoft Windows)
-   5. GCC (Linux, FreeBSD, NetBSD, Solaris...)
-
-Also on platforms except the above, it is easy to build HARU. If you success to build HARU on other platforms, please send makefile to me.
-In addition, ZLIB and PNGLIB are required when you want to use the features of 
-compression and embedding PNG images. (In the case of Windows, static library 
-files for several compilers are included in the package for WIndows.  In the 
-case of  most of UNIX, these libraries are usually installed.)
-
-
-# Available development environment
-
-Haru can work as both static-library (.a, .lib) and shared-library (.so, .dll).
-When you use it as static-library, It can be used by C and a C++.
-But when you use it as shared-library, it can be used by many development 
-languages which support shared library.
-So far, Haru provides bindings for Ruby, Delphi/Free Pascal and C#.
-
-If you write bindings for other programming languages, please notice me!
-
-
-# Runtime environment of programs using Haru
-
-1. static-library
-   No runtime files are required.
-
-2. shared-library
-   In Windows, you have to distribute libhpdf.dll with a program. In UNIX you 
-   have to distribute libhpdf.so* with a program.
-
-
-
-NOTE:
-In the UNIX environment, there are the cases that libz.so, libpng.so.x are 
-necessary. About this, please refer to the documentation of PNGLIB and ZLIB.
+The biggest differences are that all code is written in C# as result of full port of orginal libhary library.
 
 
 # License
@@ -102,6 +44,7 @@ The license of Haru is as follows.
 
 Copyright (C) 1999-2006 Takeshi Kanno
 Copyright (C) 2007-2009 Antony Dovgal
+Copyright 2026 (c) Adam Adamczyk
 
 This software is provided 'as-is', without any express or implied warranty.
 
@@ -136,3 +79,5 @@ to the following restrictions:
 
 3. Adobe Systems Inc.
    We thank Adobe Systems Inc. for publishing PDF specification.
+
+4. ChatGpt.com for providing unlimited testing of the Codex along with the ChatGPT 5.5 model   
