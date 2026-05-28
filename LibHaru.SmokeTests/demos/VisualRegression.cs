@@ -13,7 +13,8 @@ public static class VisualRegression
         var pdftoppm = FindPdftoppm();
         if (pdftoppm is null)
         {
-            Console.WriteLine($"Skipped visual render checks; pdftoppm was not found on PATH. Set {PdftoppmPathEnvVar} to a pdftoppm executable or containing directory to enable them.");
+            Console.WriteLine(
+                $"Skipped visual render checks; pdftoppm was not found on PATH. Set {PdftoppmPathEnvVar} to a pdftoppm executable or containing directory to enable them.");
             return;
         }
 
@@ -48,7 +49,8 @@ public static class VisualRegression
                 fixtures[pdfName] = CreateRefreshedFixture(pdfName, profile);
 
             if (!fixtures.TryGetValue(pdfName, out var fixture))
-                throw new InvalidOperationException($"Missing visual fixture for {pdfName}. Set {RefreshReferencesEnvVar}=1 to refresh {fixturePath} from the current renders.");
+                throw new InvalidOperationException(
+                    $"Missing visual fixture for {pdfName}. Set {RefreshReferencesEnvVar}=1 to refresh {fixturePath} from the current renders.");
 
             File.WriteAllText(outputPrefix + ".render-profile.txt", BuildProfile(pdfName, fixture, profile));
             CheckProfile(pdfName, fixture, profile);
@@ -60,7 +62,8 @@ public static class VisualRegression
             Console.WriteLine($"Refreshed {fixtures.Count} visual reference fixture(s) in {fixturePath}");
         }
 
-        Console.WriteLine($"Rendered and checked {pdfPaths.Length} PDF reference page(s) in {renderDir} using {pdftoppm}");
+        Console.WriteLine(
+            $"Rendered and checked {pdfPaths.Length} PDF reference page(s) in {renderDir} using {pdftoppm}");
     }
 
     private static Dictionary<string, VisualFixture> LoadFixtures(string fixturePath)
@@ -108,16 +111,14 @@ public static class VisualRegression
             throw new InvalidOperationException($"{pdfName} visual fixture mismatch: {string.Join("; ", failures)}");
     }
 
-    private static string BuildProfile(string pdfName, VisualFixture fixture, PngProfile profile) =>
-        string.Join(Environment.NewLine, [
-            $"pdf: {pdfName}",
-            $"width: {profile.Width} (min {fixture.MinWidth})",
+    private static string BuildProfile(string pdfName, VisualFixture fixture, PngProfile profile)
+    {
+        return string.Join(Environment.NewLine, $"pdf: {pdfName}", $"width: {profile.Width} (min {fixture.MinWidth})",
             $"height: {profile.Height} (min {fixture.MinHeight})",
             $"nonWhitePixels: {profile.NonWhitePixels} (min {fixture.MinNonWhitePixels})",
-            $"colorCount: {profile.ColorCount} (min {fixture.MinColorCount})",
-            $"colorType: {profile.ColorType}",
-            string.Empty
-        ]);
+            $"colorCount: {profile.ColorCount} (min {fixture.MinColorCount})", $"colorType: {profile.ColorType}",
+            string.Empty);
+    }
 
     private static VisualFixture CreateRefreshedFixture(string pdfName, PngProfile profile)
     {
@@ -137,28 +138,26 @@ public static class VisualRegression
             minColorCount);
     }
 
-    private static void WriteFixtures(string fixturePath, Dictionary<string, VisualFixture> fixtures, IReadOnlyList<string> preferredOrder)
+    private static void WriteFixtures(string fixturePath, Dictionary<string, VisualFixture> fixtures,
+        IReadOnlyList<string> preferredOrder)
     {
         var directory = Path.GetDirectoryName(fixturePath);
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        using var writer = new StreamWriter(fixturePath, append: false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        using var writer = new StreamWriter(fixturePath, false, new UTF8Encoding(false));
         writer.WriteLine("# pdf\tmin_width\tmin_height\tmin_non_white_pixels\tmin_color_count");
         writer.WriteLine($"# Refresh with {RefreshReferencesEnvVar}=1 when pdftoppm is available.");
 
         var written = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var pdfName in preferredOrder)
-        {
             if (fixtures.TryGetValue(pdfName, out var fixture) && written.Add(pdfName))
                 WriteFixtureLine(writer, fixture);
-        }
 
-        foreach (var fixture in fixtures.Values.OrderBy(static fixture => fixture.PdfName, StringComparer.OrdinalIgnoreCase))
-        {
+        foreach (var fixture in fixtures.Values.OrderBy(static fixture => fixture.PdfName,
+                     StringComparer.OrdinalIgnoreCase))
             if (written.Add(fixture.PdfName))
                 WriteFixtureLine(writer, fixture);
-        }
     }
 
     private static void WriteFixtureLine(TextWriter writer, VisualFixture fixture)
@@ -264,7 +263,7 @@ public static class VisualRegression
                     0 => encoded,
                     1 => unchecked((byte)(encoded + left)),
                     2 => unchecked((byte)(encoded + up)),
-                    3 => unchecked((byte)(encoded + ((left + up) / 2))),
+                    3 => unchecked((byte)(encoded + (left + up) / 2)),
                     4 => unchecked((byte)(encoded + Paeth(left, up, upperLeft))),
                     _ => throw new InvalidOperationException($"Rendered PNG has unsupported filter {filter}: {path}")
                 };
@@ -285,8 +284,9 @@ public static class VisualRegression
         return new PngProfile(width, height, colorType, nonWhitePixels, colors.Count);
     }
 
-    private static (int Red, int Green, int Blue, int Alpha) ReadPixel(byte[] scanline, int offset, int colorType) =>
-        colorType switch
+    private static (int Red, int Green, int Blue, int Alpha) ReadPixel(byte[] scanline, int offset, int colorType)
+    {
+        return colorType switch
         {
             0 => (scanline[offset], scanline[offset], scanline[offset], 255),
             2 => (scanline[offset], scanline[offset + 1], scanline[offset + 2], 255),
@@ -294,6 +294,7 @@ public static class VisualRegression
             6 => (scanline[offset], scanline[offset + 1], scanline[offset + 2], scanline[offset + 3]),
             _ => (0, 0, 0, 0)
         };
+    }
 
     private static int Paeth(int left, int up, int upperLeft)
     {
@@ -356,7 +357,8 @@ public static class VisualRegression
     private static string? FindInDirectory(string directory, string fileName)
     {
         var extensions = OperatingSystem.IsWindows()
-            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.BAT;.CMD").Split(';', StringSplitOptions.RemoveEmptyEntries)
+            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.BAT;.CMD").Split(';',
+                StringSplitOptions.RemoveEmptyEntries)
             : [string.Empty];
 
         foreach (var extension in extensions)
@@ -373,9 +375,9 @@ public static class VisualRegression
     {
         var normalized = value?.Trim();
         return normalized is not null
-            && (normalized == "1"
-                || normalized.Equals("true", StringComparison.OrdinalIgnoreCase)
-                || normalized.Equals("yes", StringComparison.OrdinalIgnoreCase));
+               && (normalized == "1"
+                   || normalized.Equals("true", StringComparison.OrdinalIgnoreCase)
+                   || normalized.Equals("yes", StringComparison.OrdinalIgnoreCase));
     }
 
     private static void Run(string fileName, params string[] arguments)
@@ -399,7 +401,8 @@ public static class VisualRegression
         process.WaitForExit();
 
         if (process.ExitCode != 0)
-            throw new InvalidOperationException($"{Path.GetFileName(fileName)} failed with exit code {process.ExitCode}: {stderr}{stdout}");
+            throw new InvalidOperationException(
+                $"{Path.GetFileName(fileName)} failed with exit code {process.ExitCode}: {stderr}{stdout}");
     }
 
     private static void RequirePng(byte[] bytes, string path)
@@ -411,10 +414,17 @@ public static class VisualRegression
             throw new InvalidOperationException($"Rendered output is not a PNG: {path}");
     }
 
-    private static int ReadBigEndianInt32(byte[] bytes, int offset) =>
-        (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+    private static int ReadBigEndianInt32(byte[] bytes, int offset)
+    {
+        return (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+    }
 
-    private sealed record VisualFixture(string PdfName, int MinWidth, int MinHeight, int MinNonWhitePixels, int MinColorCount);
+    private sealed record VisualFixture(
+        string PdfName,
+        int MinWidth,
+        int MinHeight,
+        int MinNonWhitePixels,
+        int MinColorCount);
 
     private sealed record PngProfile(int Width, int Height, int ColorType, int NonWhitePixels, int ColorCount);
 }

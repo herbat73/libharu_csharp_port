@@ -23,7 +23,8 @@ public static class ImageFixtureCoverage
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         fixtures.AddRange(Directory.EnumerateFiles(fixtureDir, "*", SearchOption.AllDirectories)
-            .Where(static path => AutoLoadExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            .Where(static path =>
+                AutoLoadExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
             .Where(path => !manifestPaths.Contains(Path.GetFullPath(path)))
             .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase)
             .Select(path => new ImageFixture(InferKind(path), path)));
@@ -66,20 +67,27 @@ public static class ImageFixtureCoverage
         var latin1 = Encoding.Latin1.GetString(File.ReadAllBytes(pdfPath));
 
         Require(Count(latin1, "/Subtype /Image") >= fixtures.Count, "Missing image XObjects for external fixtures.");
-        Require(latin1.Contains("/XObject", StringComparison.Ordinal), "Missing page XObject resources for external fixtures.");
+        Require(latin1.Contains("/XObject", StringComparison.Ordinal),
+            "Missing page XObject resources for external fixtures.");
 
         if (counts.ContainsKey("jpeg"))
-            Require(latin1.Contains("/DCTDecode", StringComparison.Ordinal), "External JPEG fixtures did not emit DCTDecode.");
+            Require(latin1.Contains("/DCTDecode", StringComparison.Ordinal),
+                "External JPEG fixtures did not emit DCTDecode.");
 
         if (counts.ContainsKey("png") || counts.ContainsKey("raw"))
-            Require(latin1.Contains("/FlateDecode", StringComparison.Ordinal), "External PNG/raw fixtures did not emit FlateDecode.");
+            Require(latin1.Contains("/FlateDecode", StringComparison.Ordinal),
+                "External PNG/raw fixtures did not emit FlateDecode.");
 
         if (counts.ContainsKey("ccitt"))
         {
-            Require(latin1.Contains("/CCITTFaxDecode", StringComparison.Ordinal), "External 1-bit fixtures did not emit CCITT compression.");
-            Require(latin1.Contains("/DecodeParms [", StringComparison.Ordinal), "External 1-bit fixtures did not emit CCITT DecodeParms.");
-            Require(latin1.Contains("/K -1", StringComparison.Ordinal), "External 1-bit fixtures did not emit Group 4 CCITT parameters.");
-            Require(latin1.Contains("/BlackIs1 ", StringComparison.Ordinal), "External 1-bit fixtures did not emit BlackIs1.");
+            Require(latin1.Contains("/CCITTFaxDecode", StringComparison.Ordinal),
+                "External 1-bit fixtures did not emit CCITT compression.");
+            Require(latin1.Contains("/DecodeParms [", StringComparison.Ordinal),
+                "External 1-bit fixtures did not emit CCITT DecodeParms.");
+            Require(latin1.Contains("/K -1", StringComparison.Ordinal),
+                "External 1-bit fixtures did not emit Group 4 CCITT parameters.");
+            Require(latin1.Contains("/BlackIs1 ", StringComparison.Ordinal),
+                "External 1-bit fixtures did not emit BlackIs1.");
         }
 
         Console.WriteLine($"Generated {pdfPath}");
@@ -102,23 +110,25 @@ public static class ImageFixtureCoverage
 
             var parts = rawLine.Split('\t');
             if (parts.Length < 2)
-                throw new InvalidOperationException($"Image fixture manifest line {lineNumber} must include kind and path.");
+                throw new InvalidOperationException(
+                    $"Image fixture manifest line {lineNumber} must include kind and path.");
 
             var kind = NormalizeKind(parts[0]);
             var fullPath = ResolveFixturePath(fixtureDir, parts[1]);
             if (!File.Exists(fullPath))
-                throw new FileNotFoundException($"Image fixture manifest line {lineNumber} references a missing file.", fullPath);
+                throw new FileNotFoundException($"Image fixture manifest line {lineNumber} references a missing file.",
+                    fullPath);
 
             fixtures.Add(new ImageFixture(
                 kind,
                 fullPath,
-                Width: ParseOptionalInt(parts, 2, lineNumber, "width"),
-                Height: ParseOptionalInt(parts, 3, lineNumber, "height"),
-                ColorSpace: ParseOptionalColorSpace(parts, 4, lineNumber),
-                BitsPerComponent: ParseOptionalInt(parts, 5, lineNumber, "bitsPerComponent"),
-                LineWidth: ParseOptionalInt(parts, 6, lineNumber, "lineWidth"),
-                BlackIs1: ParseOptionalBool(parts, 7, defaultValue: true, lineNumber, "blackIs1"),
-                TopIsFirst: ParseOptionalBool(parts, 8, defaultValue: true, lineNumber, "topIsFirst")));
+                ParseOptionalInt(parts, 2, lineNumber, "width"),
+                ParseOptionalInt(parts, 3, lineNumber, "height"),
+                ParseOptionalColorSpace(parts, 4, lineNumber),
+                ParseOptionalInt(parts, 5, lineNumber, "bitsPerComponent"),
+                ParseOptionalInt(parts, 6, lineNumber, "lineWidth"),
+                ParseOptionalBool(parts, 7, true, lineNumber, "blackIs1"),
+                ParseOptionalBool(parts, 8, true, lineNumber, "topIsFirst")));
         }
 
         return fixtures;
@@ -135,14 +145,16 @@ public static class ImageFixtureCoverage
                 File.ReadAllBytes(fixture.FullPath),
                 (uint)Required(fixture.Width, fixture, "width"),
                 (uint)Required(fixture.Height, fixture, "height"),
-                fixture.ColorSpace ?? throw new InvalidOperationException($"Raw image fixture {fixture.DisplayName} must specify a color space."),
+                fixture.ColorSpace ??
+                throw new InvalidOperationException(
+                    $"Raw image fixture {fixture.DisplayName} must specify a color space."),
                 (uint)(fixture.BitsPerComponent ?? 8)),
             "ccitt" => HPDF_Image_LoadRaw1BitImageFromMem(
                 pdf,
                 File.ReadAllBytes(fixture.FullPath),
                 (uint)Required(fixture.Width, fixture, "width"),
                 (uint)Required(fixture.Height, fixture, "height"),
-                (uint)(fixture.LineWidth ?? ((Required(fixture.Width, fixture, "width") + 7) / 8)),
+                (uint)(fixture.LineWidth ?? (Required(fixture.Width, fixture, "width") + 7) / 8),
                 fixture.BlackIs1,
                 fixture.TopIsFirst),
             _ => throw new InvalidOperationException($"Unsupported image fixture kind: {fixture.Kind}.")
@@ -152,17 +164,23 @@ public static class ImageFixtureCoverage
     private static void ValidateFixtureImage(ImageFixture fixture, PdfImage image)
     {
         Require(HPDF_Image_Validate(image), $"Image fixture failed validation: {fixture.DisplayName}.");
-        Require(HPDF_Image_GetWidth(image) > 0 && HPDF_Image_GetHeight(image) > 0, $"Image fixture has invalid dimensions: {fixture.DisplayName}.");
-        Require(HPDF_Image_GetBitsPerComponent(image) > 0, $"Image fixture has invalid bit depth: {fixture.DisplayName}.");
+        Require(HPDF_Image_GetWidth(image) > 0 && HPDF_Image_GetHeight(image) > 0,
+            $"Image fixture has invalid dimensions: {fixture.DisplayName}.");
+        Require(HPDF_Image_GetBitsPerComponent(image) > 0,
+            $"Image fixture has invalid bit depth: {fixture.DisplayName}.");
 
         if (fixture.Width is not null)
-            Require(HPDF_Image_GetWidth(image) == (uint)fixture.Width.Value, $"Image fixture width mismatch: {fixture.DisplayName}.");
+            Require(HPDF_Image_GetWidth(image) == (uint)fixture.Width.Value,
+                $"Image fixture width mismatch: {fixture.DisplayName}.");
         if (fixture.Height is not null)
-            Require(HPDF_Image_GetHeight(image) == (uint)fixture.Height.Value, $"Image fixture height mismatch: {fixture.DisplayName}.");
+            Require(HPDF_Image_GetHeight(image) == (uint)fixture.Height.Value,
+                $"Image fixture height mismatch: {fixture.DisplayName}.");
         if (fixture.ColorSpace is not null)
-            Require(HPDF_Image_GetColorSpace(image) == ColorSpaceName(fixture.ColorSpace.Value), $"Image fixture color space mismatch: {fixture.DisplayName}.");
+            Require(HPDF_Image_GetColorSpace(image) == ColorSpaceName(fixture.ColorSpace.Value),
+                $"Image fixture color space mismatch: {fixture.DisplayName}.");
         if (fixture.BitsPerComponent is not null)
-            Require(HPDF_Image_GetBitsPerComponent(image) == (uint)fixture.BitsPerComponent.Value, $"Image fixture bit-depth mismatch: {fixture.DisplayName}.");
+            Require(HPDF_Image_GetBitsPerComponent(image) == (uint)fixture.BitsPerComponent.Value,
+                $"Image fixture bit-depth mismatch: {fixture.DisplayName}.");
     }
 
     private static void DrawFixture(PdfPage page, PdfFont font, PdfImage image, ImageFixture fixture, int slot)
@@ -176,11 +194,13 @@ public static class ImageFixtureCoverage
         var height = Math.Max(8, image.Height * scale);
 
         HPDF_Page_DrawImage(page, image, x, y, width, height);
-        Require(HPDF_Page_GetXObjectName(page, image).StartsWith("Im", StringComparison.Ordinal), $"Image fixture did not receive an XObject name: {fixture.DisplayName}.");
+        Require(HPDF_Page_GetXObjectName(page, image).StartsWith("Im", StringComparison.Ordinal),
+            $"Image fixture did not receive an XObject name: {fixture.DisplayName}.");
 
         HPDF_Page_SetFontAndSize(page, font, 7);
         HPDF_Page_TextOut(page, x, y - 12, Truncate($"{fixture.Kind}: {fixture.DisplayName}", 32));
-        HPDF_Page_TextOut(page, x, y - 22, $"{image.Width}x{image.Height} {HPDF_Image_GetColorSpace(image)} {image.BitsPerComponent}bpc");
+        HPDF_Page_TextOut(page, x, y - 22,
+            $"{image.Width}x{image.Height} {HPDF_Image_GetColorSpace(image)} {image.BitsPerComponent}bpc");
     }
 
     private static string ResolveFixturePath(string fixtureDir, string path)
@@ -216,7 +236,8 @@ public static class ImageFixtureCoverage
 
         return int.TryParse(parts[index], NumberStyles.None, CultureInfo.InvariantCulture, out var value)
             ? value
-            : throw new InvalidOperationException($"Image fixture manifest line {lineNumber} has an invalid {name} value.");
+            : throw new InvalidOperationException(
+                $"Image fixture manifest line {lineNumber} has an invalid {name} value.");
     }
 
     private static bool ParseOptionalBool(string[] parts, int index, bool defaultValue, int lineNumber, string name)
@@ -226,7 +247,8 @@ public static class ImageFixtureCoverage
 
         return bool.TryParse(parts[index], out var value)
             ? value
-            : throw new InvalidOperationException($"Image fixture manifest line {lineNumber} has an invalid {name} value.");
+            : throw new InvalidOperationException(
+                $"Image fixture manifest line {lineNumber} has an invalid {name} value.");
     }
 
     private static PdfColorSpace? ParseOptionalColorSpace(string[] parts, int index, int lineNumber)
@@ -235,18 +257,21 @@ public static class ImageFixtureCoverage
             return null;
 
         var value = parts[index].Trim();
-        if (Enum.TryParse<PdfColorSpace>(value, ignoreCase: true, out var colorSpace))
+        if (Enum.TryParse<PdfColorSpace>(value, true, out var colorSpace))
             return colorSpace;
 
         return value.Equals("DeviceRGB", StringComparison.OrdinalIgnoreCase) ? PdfColorSpace.DeviceRgb
             : value.Equals("DeviceGray", StringComparison.OrdinalIgnoreCase) ? PdfColorSpace.DeviceGray
             : value.Equals("DeviceCMYK", StringComparison.OrdinalIgnoreCase) ? PdfColorSpace.DeviceCmyk
-            : throw new InvalidOperationException($"Image fixture manifest line {lineNumber} has an invalid colorSpace value.");
+            : throw new InvalidOperationException(
+                $"Image fixture manifest line {lineNumber} has an invalid colorSpace value.");
     }
 
     private static int Required(int? value, ImageFixture fixture, string name)
     {
-        return value ?? throw new InvalidOperationException($"{fixture.Kind} image fixture {fixture.DisplayName} must specify {name}.");
+        return value ??
+               throw new InvalidOperationException(
+                   $"{fixture.Kind} image fixture {fixture.DisplayName} must specify {name}.");
     }
 
     private static string ColorSpaceName(PdfColorSpace colorSpace)

@@ -90,7 +90,8 @@ public sealed class PdfDestination
             throw Owner.CreateException(HaruStatus.InvalidDestination, "Destination object must be an array.");
 
         if (!destination.MatchesClass(PdfObjectClass.Array | PdfObjectClass.Destination))
-            throw Owner.CreateException(HaruStatus.InvalidDestination, "Destination object must be a destination array.");
+            throw Owner.CreateException(HaruStatus.InvalidDestination,
+                "Destination object must be a destination array.");
 
         try
         {
@@ -98,7 +99,8 @@ public sealed class PdfDestination
         }
         catch (HaruException ex)
         {
-            throw Owner.CreateException(HaruStatus.InvalidDestination, "Destination target page is invalid.", ex.Status);
+            throw Owner.CreateException(HaruStatus.InvalidDestination, "Destination target page is invalid.",
+                ex.Status);
         }
     }
 
@@ -116,5 +118,8 @@ public sealed class PdfDestination
             throw Owner.CreateException(HaruStatus.RealOutOfRange, "Destination values must be finite.");
     }
 
-    private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+    private static bool IsFinite(double value)
+    {
+        return !double.IsNaN(value) && !double.IsInfinity(value);
+    }
 }

@@ -27,13 +27,16 @@ public static class ReferenceOutputRegression
             if (fixture.GeneratedPath == "-")
             {
                 if (referencePath is null)
-                    throw new InvalidOperationException($"{fixturePath}: reference hash-only rows must include a checked-in reference PDF path.");
+                    throw new InvalidOperationException(
+                        $"{fixturePath}: reference hash-only rows must include a checked-in reference PDF path.");
 
                 if (!File.Exists(referencePath))
-                    throw new FileNotFoundException("Cannot load checked-in reference PDF for hash validation.", referencePath);
+                    throw new FileNotFoundException("Cannot load checked-in reference PDF for hash validation.",
+                        referencePath);
 
                 if (string.IsNullOrEmpty(fixture.ReferenceSha256))
-                    throw new InvalidOperationException($"{fixture.ReferencePath}: reference hash-only rows must include an expected SHA-256.");
+                    throw new InvalidOperationException(
+                        $"{fixture.ReferencePath}: reference hash-only rows must include an expected SHA-256.");
 
                 ValidateReferenceHash(fixture, File.ReadAllBytes(referencePath));
                 hashOnlyCount++;
@@ -53,7 +56,8 @@ public static class ReferenceOutputRegression
                 var referenceSha256 = ValidateReferenceHash(fixture, referenceBytes);
 
                 if (!generatedBytes.SequenceEqual(referenceBytes))
-                    throw new InvalidOperationException($"{fixture.GeneratedPath}: exact upstream fixture mismatch. Generated {generatedBytes.Length} bytes/{generatedSha256}; reference {referenceBytes.Length} bytes/{referenceSha256}.");
+                    throw new InvalidOperationException(
+                        $"{fixture.GeneratedPath}: exact upstream fixture mismatch. Generated {generatedBytes.Length} bytes/{generatedSha256}; reference {referenceBytes.Length} bytes/{referenceSha256}.");
 
                 exactCount++;
                 continue;
@@ -62,7 +66,8 @@ public static class ReferenceOutputRegression
             if (!string.IsNullOrEmpty(fixture.ReferenceSha256))
             {
                 if (!string.Equals(generatedSha256, fixture.ReferenceSha256, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException($"{fixture.GeneratedPath}: exact reference hash mismatch. Generated {generatedSha256}, expected {fixture.ReferenceSha256}.");
+                    throw new InvalidOperationException(
+                        $"{fixture.GeneratedPath}: exact reference hash mismatch. Generated {generatedSha256}, expected {fixture.ReferenceSha256}.");
 
                 generatedHashCount++;
                 continue;
@@ -71,7 +76,8 @@ public static class ReferenceOutputRegression
             skippedCount++;
         }
 
-        Console.WriteLine($"Checked {exactCount} exact upstream reference PDF fixture(s), {generatedHashCount} generated SHA-256 fixture(s), and {hashOnlyCount} checked-in upstream SHA-256 fixture(s); skipped {skippedCount} unavailable fixture(s).");
+        Console.WriteLine(
+            $"Checked {exactCount} exact upstream reference PDF fixture(s), {generatedHashCount} generated SHA-256 fixture(s), and {hashOnlyCount} checked-in upstream SHA-256 fixture(s); skipped {skippedCount} unavailable fixture(s).");
     }
 
     private static List<ReferenceFixture> LoadFixtures(string fixturePath)
@@ -87,7 +93,8 @@ public static class ReferenceOutputRegression
 
             var parts = line.Split('\t');
             if (parts.Length is < 2 or > 3)
-                throw new InvalidOperationException($"{fixturePath}:{lineNumber}: expected two or three tab-separated fields.");
+                throw new InvalidOperationException(
+                    $"{fixturePath}:{lineNumber}: expected two or three tab-separated fields.");
 
             fixtures.Add(new ReferenceFixture(
                 parts[0],
@@ -98,8 +105,10 @@ public static class ReferenceOutputRegression
         return fixtures;
     }
 
-    private static string ResolvePath(string root, string path) =>
-        Path.IsPathRooted(path) ? path : Path.Combine(root, path);
+    private static string ResolvePath(string root, string path)
+    {
+        return Path.IsPathRooted(path) ? path : Path.Combine(root, path);
+    }
 
     private static string ValidateReferenceHash(ReferenceFixture fixture, byte[] referenceBytes)
     {
@@ -108,14 +117,18 @@ public static class ReferenceOutputRegression
             !string.Equals(referenceSha256, fixture.ReferenceSha256, StringComparison.OrdinalIgnoreCase))
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{fixture.ReferencePath}: reference fixture hash changed. Expected {fixture.ReferenceSha256}, actual {referenceSha256}.");
+            Console.WriteLine(
+                $"{fixture.ReferencePath}: reference fixture hash changed. Expected {fixture.ReferenceSha256}, actual {referenceSha256}.");
             Console.ResetColor();
         }
 
         return referenceSha256;
     }
 
-    private static string Sha256(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    private static string Sha256(byte[] bytes)
+    {
+        return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    }
 
     private sealed record ReferenceFixture(string GeneratedPath, string ReferencePath, string ReferenceSha256);
 }

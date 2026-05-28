@@ -37,12 +37,14 @@ public static class ErrorModel
         }
         catch (HaruException ex) when (ex.Status == HaruStatus.InvalidPageIndex)
         {
-            Require(HPDF_GetError(pdf) == HaruStatus.InvalidPageIndex, "Raised error was not recorded on the document.");
+            Require(HPDF_GetError(pdf) == HaruStatus.InvalidPageIndex,
+                "Raised error was not recorded on the document.");
             Require(HPDF_GetErrorDetail(pdf) == HaruStatus.NoError, "Raised detail code should be zero.");
         }
 
         HPDF_ResetError(pdf);
-        ExpectDocumentError(pdf, HaruStatus.InvalidCompressionMode, () => pdf.SetCompressionMode((CompressionMode)0x100));
+        ExpectDocumentError(pdf, HaruStatus.InvalidCompressionMode,
+            () => pdf.SetCompressionMode((CompressionMode)0x100));
 
         HPDF_ResetError(pdf);
         ExpectDocumentError(pdf, HaruStatus.PageLayoutOutOfRange, () => pdf.SetPageLayout((PdfPageLayout)999));
@@ -51,7 +53,8 @@ public static class ErrorModel
         ExpectDocumentError(pdf, HaruStatus.InvalidFontName, () => pdf.GetFont(null!));
 
         HPDF_ResetError(pdf);
-        ExpectDocumentError(pdf, HaruStatus.InvalidEncodingName, () => pdf.GetFont("Helvetica", "DefinitelyMissingEncoding"));
+        ExpectDocumentError(pdf, HaruStatus.InvalidEncodingName,
+            () => pdf.GetFont("Helvetica", "DefinitelyMissingEncoding"));
 
         HPDF_ResetError(pdf);
         ExpectDocumentError(pdf, HaruStatus.MissingFileNameEntry, () => pdf.SaveToFile(""));
@@ -73,7 +76,8 @@ public static class ErrorModel
         ExpectDocumentError(pdf, HaruStatus.ExtGStateOutOfRange, () => extGState.SetAlphaFill(1.5));
 
         HPDF_ResetError(pdf);
-        ExpectDocumentError(pdf, HaruStatus.InvalidImage, () => pdf.LoadRawImageFromMem([0], 0, 1, PdfColorSpace.DeviceRgb));
+        ExpectDocumentError(pdf, HaruStatus.InvalidImage,
+            () => pdf.LoadRawImageFromMem([0], 0, 1, PdfColorSpace.DeviceRgb));
 
         HPDF_ResetError(pdf);
         var view = pdf.Create3DView("default");

@@ -7,26 +7,25 @@ namespace LibHaru;
 public sealed class PdfPage
 {
     private static readonly Encoding Ascii = Encoding.ASCII;
-    private MemoryStream _contents = new();
-    private readonly List<PdfContentStream> _contentStreams = [];
-    private readonly Dictionary<string, PdfFont> _fonts = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, PdfImage> _xObjects = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, PdfXObject> _formXObjects = new(StringComparer.Ordinal);
-    private readonly Dictionary<PdfPageBoundary, PdfRect> _boundaries = new();
     private readonly List<PdfAnnotation> _annotations = [];
+    private readonly Dictionary<PdfPageBoundary, PdfRect> _boundaries = new();
+    private readonly List<PdfContentStream> _contentStreams = [];
     private readonly Dictionary<string, PdfExtGState> _extGStates = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, PdfShading> _shadings = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PdfFont> _fonts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PdfXObject> _formXObjects = new(StringComparer.Ordinal);
     private readonly Stack<PdfGraphicsState> _graphicsStateStack = new();
-    private PdfGraphicsState _graphicsState = PdfGraphicsState.Default;
-    private PdfGraphicsMode _graphicsMode = PdfGraphicsMode.PageDescription;
+    private readonly Dictionary<string, PdfShading> _shadings = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PdfImage> _xObjects = new(StringComparer.Ordinal);
+    private MemoryStream _contents = new();
     private PdfPoint _currentPosition;
     private PdfPoint _currentTextPosition;
-    private PdfTransMatrix _textMatrix = PdfTransMatrix.Identity;
-    private PdfSlideShow? _slideShow;
-    private ushort? _rotate;
-    private double? _zoom;
-    private bool _inText;
+    private PdfGraphicsState _graphicsState = PdfGraphicsState.Default;
     private bool _hasCurrentPath;
+    private bool _inText;
+    private ushort? _rotate;
+    private PdfSlideShow? _slideShow;
+    private PdfTransMatrix _textMatrix = PdfTransMatrix.Identity;
+    private double? _zoom;
 
     internal PdfPage(PdfDocument owner, PdfIndirectObject pageObject, PdfIndirectObject contentsObject)
     {
@@ -85,23 +84,33 @@ public sealed class PdfPage
 
     public uint GStateDepth => _graphicsState.Depth;
 
-    public PdfGraphicsMode GraphicsMode => _graphicsMode;
+    public PdfGraphicsMode GraphicsMode { get; private set; } = PdfGraphicsMode.PageDescription;
 
-    public PdfPoint CurrentPosition => _graphicsMode == PdfGraphicsMode.PathObject ? _currentPosition : new PdfPoint(0, 0);
+    public PdfPoint CurrentPosition =>
+        GraphicsMode == PdfGraphicsMode.PathObject ? _currentPosition : new PdfPoint(0, 0);
 
     public PdfPoint CurrentTextPosition => _inText ? _currentTextPosition : new PdfPoint(0, 0);
 
-    public PdfRgbColor RgbFill => _graphicsState.FillColorSpace == PdfColorSpace.DeviceRgb ? _graphicsState.RgbFill : PdfRgbColor.Black;
+    public PdfRgbColor RgbFill => _graphicsState.FillColorSpace == PdfColorSpace.DeviceRgb
+        ? _graphicsState.RgbFill
+        : PdfRgbColor.Black;
 
-    public PdfRgbColor RgbStroke => _graphicsState.StrokeColorSpace == PdfColorSpace.DeviceRgb ? _graphicsState.RgbStroke : PdfRgbColor.Black;
+    public PdfRgbColor RgbStroke => _graphicsState.StrokeColorSpace == PdfColorSpace.DeviceRgb
+        ? _graphicsState.RgbStroke
+        : PdfRgbColor.Black;
 
-    public PdfCmykColor CmykFill => _graphicsState.FillColorSpace == PdfColorSpace.DeviceCmyk ? _graphicsState.CmykFill : new PdfCmykColor(0, 0, 0, 0);
+    public PdfCmykColor CmykFill => _graphicsState.FillColorSpace == PdfColorSpace.DeviceCmyk
+        ? _graphicsState.CmykFill
+        : new PdfCmykColor(0, 0, 0, 0);
 
-    public PdfCmykColor CmykStroke => _graphicsState.StrokeColorSpace == PdfColorSpace.DeviceCmyk ? _graphicsState.CmykStroke : new PdfCmykColor(0, 0, 0, 0);
+    public PdfCmykColor CmykStroke => _graphicsState.StrokeColorSpace == PdfColorSpace.DeviceCmyk
+        ? _graphicsState.CmykStroke
+        : new PdfCmykColor(0, 0, 0, 0);
 
     public double GrayFill => _graphicsState.FillColorSpace == PdfColorSpace.DeviceGray ? _graphicsState.GrayFill : 0;
 
-    public double GrayStroke => _graphicsState.StrokeColorSpace == PdfColorSpace.DeviceGray ? _graphicsState.GrayStroke : 0;
+    public double GrayStroke =>
+        _graphicsState.StrokeColorSpace == PdfColorSpace.DeviceGray ? _graphicsState.GrayStroke : 0;
 
     public void SetWidth(double width)
     {
@@ -163,7 +172,8 @@ public sealed class PdfPage
     public void SetRotate(ushort angle)
     {
         if (angle % 90 != 0)
-            throw Owner.CreateException(HaruStatus.PageInvalidRotateValue, "Page rotation angle must be a multiple of 90 degrees.", angle);
+            throw Owner.CreateException(HaruStatus.PageInvalidRotateValue,
+                "Page rotation angle must be a multiple of 90 degrees.", angle);
 
         _rotate = angle;
     }
@@ -182,10 +192,12 @@ public sealed class PdfPage
             throw Owner.CreateException(HaruStatus.InvalidPageSlideshowType, "Unknown page transition style.");
 
         if (displayTime < 0 || double.IsNaN(displayTime) || double.IsInfinity(displayTime))
-            throw Owner.CreateException(HaruStatus.PageInvalidTransitionTime, "Display time must be a non-negative finite number.");
+            throw Owner.CreateException(HaruStatus.PageInvalidTransitionTime,
+                "Display time must be a non-negative finite number.");
 
         if (transitionTime < 0 || double.IsNaN(transitionTime) || double.IsInfinity(transitionTime))
-            throw Owner.CreateException(HaruStatus.PageInvalidTransitionTime, "Transition time must be a non-negative finite number.");
+            throw Owner.CreateException(HaruStatus.PageInvalidTransitionTime,
+                "Transition time must be a non-negative finite number.");
 
         _slideShow = new PdfSlideShow(style, displayTime, transitionTime);
     }
@@ -269,7 +281,7 @@ public sealed class PdfPage
 
         WriteOperator("BT");
         _inText = true;
-        _graphicsMode = PdfGraphicsMode.TextObject;
+        GraphicsMode = PdfGraphicsMode.TextObject;
         _currentTextPosition = new PdfPoint(0, 0);
         _textMatrix = PdfTransMatrix.Identity;
 
@@ -284,7 +296,7 @@ public sealed class PdfPage
 
         WriteOperator("ET");
         _inText = false;
-        _graphicsMode = PdfGraphicsMode.PageDescription;
+        GraphicsMode = PdfGraphicsMode.PageDescription;
         _currentTextPosition = new PdfPoint(0, 0);
     }
 
@@ -319,7 +331,7 @@ public sealed class PdfPage
         EnsureTextMode();
         EnsureFont();
         WritePdfString(text);
-        WriteOperator(" Tj", leadingSpace: false);
+        WriteOperator(" Tj", false);
         AdvanceTextPosition(text);
     }
 
@@ -389,7 +401,8 @@ public sealed class PdfPage
         MoveToNextLineState();
     }
 
-    public uint TextRect(double left, double top, double right, double bottom, string text, PdfTextAlignment align, out uint length)
+    public uint TextRect(double left, double top, double right, double bottom, string text, PdfTextAlignment align,
+        out uint length)
     {
         if (text is null)
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Text cannot be null.");
@@ -397,8 +410,10 @@ public sealed class PdfPage
         if (!Enum.IsDefined(align))
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Text alignment is out of range.");
 
-        if (!IsFinite(left) || !IsFinite(top) || !IsFinite(right) || !IsFinite(bottom) || right <= left || top <= bottom)
-            throw Owner.CreateException(HaruStatus.PageInvalidBoundary, "Text rectangle must be finite and have positive width and height.");
+        if (!IsFinite(left) || !IsFinite(top) || !IsFinite(right) || !IsFinite(bottom) || right <= left ||
+            top <= bottom)
+            throw Owner.CreateException(HaruStatus.PageInvalidBoundary,
+                "Text rectangle must be finite and have positive width and height.");
 
         EnsureTextMode();
         EnsureFont();
@@ -421,7 +436,7 @@ public sealed class PdfPage
             if (y < bottom)
                 return HaruStatus.PageInsufficientSpace;
 
-            var lineLength = MeasureText(remaining, right - left, wordWrap: true, out var realWidth);
+            var lineLength = MeasureText(remaining, right - left, true, out var realWidth);
             if (lineLength <= 0)
                 return HaruStatus.PageInsufficientSpace;
 
@@ -472,7 +487,7 @@ public sealed class PdfPage
         }
 
         WritePdfString(text);
-        WriteOperator(" '", leadingSpace: false);
+        WriteOperator(" '", false);
         MoveToNextLineState();
         AdvanceTextPosition(text);
     }
@@ -493,7 +508,7 @@ public sealed class PdfPage
 
         WriteAscii($"{N(wordSpace)} {N(charSpace)} ");
         WritePdfString(text);
-        WriteOperator(" \"", leadingSpace: false);
+        WriteOperator(" \"", false);
         _graphicsState = _graphicsState with
         {
             WordSpace = wordSpace,
@@ -598,7 +613,10 @@ public sealed class PdfPage
         SetCurrentPosition(x - xRadius, y);
     }
 
-    public void ClosePath() => WriteOperator("h");
+    public void ClosePath()
+    {
+        WriteOperator("h");
+    }
 
     public void Stroke()
     {
@@ -657,13 +675,13 @@ public sealed class PdfPage
     public void Clip()
     {
         WriteOperator("W");
-        _graphicsMode = PdfGraphicsMode.ClippingPath;
+        GraphicsMode = PdfGraphicsMode.ClippingPath;
     }
 
     public void Eoclip()
     {
         WriteOperator("W*");
-        _graphicsMode = PdfGraphicsMode.ClippingPath;
+        GraphicsMode = PdfGraphicsMode.ClippingPath;
     }
 
     public void GSave()
@@ -712,7 +730,8 @@ public sealed class PdfPage
     public void SetMiterLimit(double limit)
     {
         if (limit < 1 || double.IsNaN(limit) || double.IsInfinity(limit))
-            throw Owner.CreateException(HaruStatus.PageOutOfRange, "Miter limit must be a finite number greater than or equal to 1.");
+            throw Owner.CreateException(HaruStatus.PageOutOfRange,
+                "Miter limit must be a finite number greater than or equal to 1.");
 
         _graphicsState = _graphicsState with { MiterLimit = limit };
         WriteOperator($"{N(limit)} M");
@@ -724,16 +743,17 @@ public sealed class PdfPage
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Dash pattern cannot be null.");
 
         if (pattern.Count > 8)
-            throw Owner.CreateException(HaruStatus.PageInvalidParamCount, "Dash patterns can contain at most eight entries.");
+            throw Owner.CreateException(HaruStatus.PageInvalidParamCount,
+                "Dash patterns can contain at most eight entries.");
 
         if (pattern.Count == 0 && phase > 0)
-            throw Owner.CreateException(HaruStatus.PageOutOfRange, "A solid dash pattern cannot have a positive phase.");
+            throw Owner.CreateException(HaruStatus.PageOutOfRange,
+                "A solid dash pattern cannot have a positive phase.");
 
         foreach (var value in pattern)
-        {
             if (value <= 0 || value > 100 || double.IsNaN(value) || double.IsInfinity(value))
-                throw Owner.CreateException(HaruStatus.PageOutOfRange, "Dash pattern entries must be positive finite values no greater than 100.");
-        }
+                throw Owner.CreateException(HaruStatus.PageOutOfRange,
+                    "Dash pattern entries must be positive finite values no greater than 100.");
 
         if (phase < 0 || double.IsNaN(phase) || double.IsInfinity(phase))
             throw Owner.CreateException(HaruStatus.PageOutOfRange, "Dash phase must be a non-negative finite number.");
@@ -879,7 +899,8 @@ public sealed class PdfPage
     public void InsertSharedContentStream(PdfContentStream sharedStream)
     {
         if (sharedStream is null || !ReferenceEquals(sharedStream.Owner, Owner))
-            throw Owner.CreateException(HaruStatus.InvalidStream, "Shared content stream does not belong to this document.");
+            throw Owner.CreateException(HaruStatus.InvalidStream,
+                "Shared content stream does not belong to this document.");
 
         sharedStream.ValidateOrThrow();
         _contentStreams.Add(sharedStream);
@@ -895,7 +916,8 @@ public sealed class PdfPage
     public PdfAnnotation CreateLinkAnnotation(PdfRect rect, PdfDestination destination)
     {
         if (destination is null || !ReferenceEquals(destination.Owner, Owner))
-            throw Owner.CreateException(HaruStatus.InvalidDestination, "Link destination does not belong to this document.");
+            throw Owner.CreateException(HaruStatus.InvalidDestination,
+                "Link destination does not belong to this document.");
 
         destination.ValidateOrThrow();
         var annotation = CreateAnnotation(rect, "Link");
@@ -935,7 +957,10 @@ public sealed class PdfPage
     {
         var annotation = CreateAnnotation(rect, "Line");
         annotation.Dictionary.Set("Contents", PdfString.FromText(text ?? string.Empty));
-        annotation.Dictionary.Set("L", new PdfArray([new PdfReal(startPoint.X), new PdfReal(startPoint.Y), new PdfReal(endPoint.X), new PdfReal(endPoint.Y)]));
+        annotation.Dictionary.Set("L",
+            new PdfArray([
+                new PdfReal(startPoint.X), new PdfReal(startPoint.Y), new PdfReal(endPoint.X), new PdfReal(endPoint.Y)
+            ]));
         return annotation;
     }
 
@@ -975,7 +1000,10 @@ public sealed class PdfPage
         return annotation;
     }
 
-    public PdfAnnotation CreateHighlightAnnotation(PdfRect rect, string text) => CreateTextMarkupAnnotation(rect, text, "Highlight");
+    public PdfAnnotation CreateHighlightAnnotation(PdfRect rect, string text)
+    {
+        return CreateTextMarkupAnnotation(rect, text, "Highlight");
+    }
 
     public PdfAnnotation CreateTextMarkupAnnotation(PdfRect rect, string text, PdfAnnotType subtype)
     {
@@ -985,20 +1013,31 @@ public sealed class PdfPage
             PdfAnnotType.Underline => CreateUnderlineAnnotation(rect, text),
             PdfAnnotType.Squiggly => CreateSquigglyAnnotation(rect, text),
             PdfAnnotType.StrikeOut => CreateStrikeOutAnnotation(rect, text),
-            _ => throw Owner.CreateException(HaruStatus.InvalidAnnotation, "Unsupported text-markup annotation subtype.")
+            _ => throw Owner.CreateException(HaruStatus.InvalidAnnotation,
+                "Unsupported text-markup annotation subtype.")
         };
     }
 
-    public PdfAnnotation CreateUnderlineAnnotation(PdfRect rect, string text) => CreateTextMarkupAnnotation(rect, text, "Underline");
+    public PdfAnnotation CreateUnderlineAnnotation(PdfRect rect, string text)
+    {
+        return CreateTextMarkupAnnotation(rect, text, "Underline");
+    }
 
-    public PdfAnnotation CreateSquigglyAnnotation(PdfRect rect, string text) => CreateTextMarkupAnnotation(rect, text, "Squiggly");
+    public PdfAnnotation CreateSquigglyAnnotation(PdfRect rect, string text)
+    {
+        return CreateTextMarkupAnnotation(rect, text, "Squiggly");
+    }
 
-    public PdfAnnotation CreateStrikeOutAnnotation(PdfRect rect, string text) => CreateTextMarkupAnnotation(rect, text, "StrikeOut");
+    public PdfAnnotation CreateStrikeOutAnnotation(PdfRect rect, string text)
+    {
+        return CreateTextMarkupAnnotation(rect, text, "StrikeOut");
+    }
 
     public PdfAnnotation CreatePopupAnnotation(PdfRect rect, PdfAnnotation parent)
     {
         if (parent is null || !ReferenceEquals(parent.Owner, Owner))
-            throw Owner.CreateException(HaruStatus.InvalidAnnotation, "Popup parent annotation does not belong to this document.");
+            throw Owner.CreateException(HaruStatus.InvalidAnnotation,
+                "Popup parent annotation does not belong to this document.");
 
         var annotation = CreateAnnotation(rect, "Popup");
         annotation.Dictionary.Set("Parent", parent.AnnotationObject.Reference);
@@ -1049,9 +1088,10 @@ public sealed class PdfPage
     public void SetExtGState(PdfExtGState extGState)
     {
         if (extGState is null || !ReferenceEquals(extGState.Owner, Owner))
-            throw Owner.CreateException(HaruStatus.InvalidExtGState, "Extended graphics state does not belong to this document.");
+            throw Owner.CreateException(HaruStatus.InvalidExtGState,
+                "Extended graphics state does not belong to this document.");
 
-        extGState.ValidateOrThrow(writable: false);
+        extGState.ValidateOrThrow(false);
         _extGStates.TryAdd(extGState.ResourceName, extGState);
         WriteOperator($"/{extGState.ResourceName} gs");
     }
@@ -1121,7 +1161,8 @@ public sealed class PdfPage
 
         pageDictionary.SetName("Type", "Page");
         pageDictionary.Set("Parent", parent);
-        pageDictionary.Set("MediaBox", RectArray(_boundaries.GetValueOrDefault(PdfPageBoundary.MediaBox, new PdfRect(0, 0, Width, Height))));
+        pageDictionary.Set("MediaBox",
+            RectArray(_boundaries.GetValueOrDefault(PdfPageBoundary.MediaBox, new PdfRect(0, 0, Width, Height))));
 
         SetOptionalBoundary(pageDictionary, PdfPageBoundary.CropBox, "CropBox");
         SetOptionalBoundary(pageDictionary, PdfPageBoundary.BleedBox, "BleedBox");
@@ -1142,10 +1183,12 @@ public sealed class PdfPage
         if (_contentStreams.Count == 1)
             pageDictionary.Set("Contents", _contentStreams[0].StreamObject.Reference);
         else
-            pageDictionary.Set("Contents", new PdfArray(_contentStreams.Select(static stream => stream.StreamObject.Reference)));
+            pageDictionary.Set("Contents",
+                new PdfArray(_contentStreams.Select(static stream => stream.StreamObject.Reference)));
 
         if (_annotations.Count > 0)
-            pageDictionary.Set("Annots", new PdfArray(_annotations.Select(static annotation => annotation.AnnotationObject.Reference)));
+            pageDictionary.Set("Annots",
+                new PdfArray(_annotations.Select(static annotation => annotation.AnnotationObject.Reference)));
         else
             pageDictionary.Remove("Annots");
 
@@ -1213,7 +1256,7 @@ public sealed class PdfPage
         var rx0 = radius * Math.Cos(newAngle);
         var ry0 = radius * Math.Sin(newAngle);
         var rx2 = (radius * 4.0 - rx0) / 3.0;
-        var ry2 = ((radius - rx0) * (rx0 - radius * 3.0)) / (3.0 * ry0);
+        var ry2 = (radius - rx0) * (rx0 - radius * 3.0) / (3.0 * ry0);
         var rx1 = rx2;
         var ry1 = -ry2;
         var rx3 = rx0;
@@ -1263,21 +1306,27 @@ public sealed class PdfPage
         CurveTo(x - radius * kappa, y - radius, x - radius, y - radius * kappa, x - radius, y);
     }
 
-    private static double RotateX(double x, double y, double angle) => x * Math.Cos(angle) - y * Math.Sin(angle);
+    private static double RotateX(double x, double y, double angle)
+    {
+        return x * Math.Cos(angle) - y * Math.Sin(angle);
+    }
 
-    private static double RotateY(double x, double y, double angle) => x * Math.Sin(angle) + y * Math.Cos(angle);
+    private static double RotateY(double x, double y, double angle)
+    {
+        return x * Math.Sin(angle) + y * Math.Cos(angle);
+    }
 
     private void SetCurrentPosition(double x, double y)
     {
         _currentPosition = new PdfPoint(x, y);
         _hasCurrentPath = true;
-        _graphicsMode = PdfGraphicsMode.PathObject;
+        GraphicsMode = PdfGraphicsMode.PathObject;
     }
 
     private void ClearCurrentPath()
     {
         _hasCurrentPath = false;
-        _graphicsMode = PdfGraphicsMode.PageDescription;
+        GraphicsMode = PdfGraphicsMode.PageDescription;
     }
 
     private void MoveTextPosition(double x, double y)
@@ -1305,17 +1354,13 @@ public sealed class PdfPage
         var width = TextWidth(text);
 
         if (_graphicsState.WritingMode == PdfWritingMode.Horizontal)
-        {
             _currentTextPosition = new PdfPoint(
                 _currentTextPosition.X + width * _textMatrix.A,
                 _currentTextPosition.Y + width * _textMatrix.B);
-        }
         else
-        {
             _currentTextPosition = new PdfPoint(
                 _currentTextPosition.X - width * _textMatrix.B,
                 _currentTextPosition.Y - width * _textMatrix.A);
-        }
     }
 
     private void ValidateXObject(PdfImage? image)
@@ -1390,7 +1435,8 @@ public sealed class PdfPage
     private void EnsureFont()
     {
         if (_graphicsState.Font is null)
-            throw Owner.CreateException(HaruStatus.PageInvalidFont, "A current font must be selected before writing text.");
+            throw Owner.CreateException(HaruStatus.PageInvalidFont,
+                "A current font must be selected before writing text.");
     }
 
     private void EnsureTextMode()
@@ -1407,7 +1453,8 @@ public sealed class PdfPage
 
     private void ValidateRect(PdfRect rect, uint status)
     {
-        if (!IsFinite(rect.Left) || !IsFinite(rect.Bottom) || !IsFinite(rect.Right) || !IsFinite(rect.Top) || rect.Right <= rect.Left || rect.Top <= rect.Bottom)
+        if (!IsFinite(rect.Left) || !IsFinite(rect.Bottom) || !IsFinite(rect.Right) || !IsFinite(rect.Top) ||
+            rect.Right <= rect.Left || rect.Top <= rect.Bottom)
             throw Owner.CreateException(status, "Rectangle coordinates must be finite and define a positive area.");
     }
 
@@ -1518,9 +1565,15 @@ public sealed class PdfPage
             throw Owner.CreateException(HaruStatus.PageOutOfRange, $"{name} must be between 0 and 1.");
     }
 
-    private static bool IsUnit(double value) => value is >= 0 and <= 1 && !double.IsNaN(value);
+    private static bool IsUnit(double value)
+    {
+        return value is >= 0 and <= 1 && !double.IsNaN(value);
+    }
 
-    private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+    private static bool IsFinite(double value)
+    {
+        return !double.IsNaN(value) && !double.IsInfinity(value);
+    }
 
     private string N(double value)
     {

@@ -7,6 +7,7 @@ namespace LibHaru.Internal;
 internal static class PngImageLoader
 {
     private static readonly byte[] Signature = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
+
     private static readonly Adam7Pass[] Adam7Passes =
     [
         new(0, 0, 8, 8),
@@ -18,9 +19,15 @@ internal static class PngImageLoader
         new(0, 1, 1, 2)
     ];
 
-    internal static PngImageData Load(byte[] data, PdfDocument owner) => LoadCore(data, owner, decodeImageData: true);
+    internal static PngImageData Load(byte[] data, PdfDocument owner)
+    {
+        return LoadCore(data, owner, true);
+    }
 
-    internal static PngImageData LoadMetadata(byte[] data, PdfDocument owner) => LoadCore(data, owner, decodeImageData: false);
+    internal static PngImageData LoadMetadata(byte[] data, PdfDocument owner)
+    {
+        return LoadCore(data, owner, false);
+    }
 
     private static PngImageData LoadCore(byte[] data, PdfDocument owner, bool decodeImageData)
     {
@@ -98,7 +105,8 @@ internal static class PngImageLoader
                 case "gAMA":
                     EnsureHeader(header, owner);
                     if (sawGamma || sawPalette || sawIdat || sawSrgb || sawIccProfile || length != 4)
-                        throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG gAMA chunk is invalid or out of order.");
+                        throw owner.CreateException(HaruStatus.InvalidPngImage,
+                            "PNG gAMA chunk is invalid or out of order.");
 
                     sawGamma = true;
                     var gamma = ReadUInt32(chunk, 0);
@@ -113,7 +121,8 @@ internal static class PngImageLoader
                 case "cHRM":
                     EnsureHeader(header, owner);
                     if (sawChromaticities || sawPalette || sawIdat || sawSrgb || sawIccProfile || length != 32)
-                        throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG cHRM chunk is invalid or out of order.");
+                        throw owner.CreateException(HaruStatus.InvalidPngImage,
+                            "PNG cHRM chunk is invalid or out of order.");
 
                     sawChromaticities = true;
                     colorManagement = (colorManagement ?? PngColorManagementData.Empty) with
@@ -124,7 +133,8 @@ internal static class PngImageLoader
                 case "sRGB":
                     EnsureHeader(header, owner);
                     if (sawSrgb || sawPalette || sawIccProfile || sawIdat || length != 1)
-                        throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG sRGB chunk is invalid or out of order.");
+                        throw owner.CreateException(HaruStatus.InvalidPngImage,
+                            "PNG sRGB chunk is invalid or out of order.");
 
                     sawSrgb = true;
                     colorManagement = PngColorManagementData.Srgb(SrgbRenderingIntent(chunk[0], owner));
@@ -143,22 +153,25 @@ internal static class PngImageLoader
                 case "bKGD":
                     var backgroundHeader = RequireHeader(header, owner);
                     if (sawBackground || sawIdat)
-                        throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG bKGD chunk is invalid or out of order.");
+                        throw owner.CreateException(HaruStatus.InvalidPngImage,
+                            "PNG bKGD chunk is invalid or out of order.");
 
                     sawBackground = true;
                     ValidateBackgroundChunk(backgroundHeader, sawPalette, palette, chunk, owner);
                     break;
                 case "hIST":
                     EnsureHeader(header, owner);
-                    if (sawHistogram || !sawPalette || sawIdat || palette is null || length != (palette.Length / 3) * 2)
-                        throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG hIST chunk is invalid or out of order.");
+                    if (sawHistogram || !sawPalette || sawIdat || palette is null || length != palette.Length / 3 * 2)
+                        throw owner.CreateException(HaruStatus.InvalidPngImage,
+                            "PNG hIST chunk is invalid or out of order.");
 
                     sawHistogram = true;
                     break;
                 case "pHYs":
                     EnsureHeader(header, owner);
                     if (sawPhysicalPixels || sawIdat || length != 9 || chunk[8] > 1)
-                        throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG pHYs chunk is invalid or out of order.");
+                        throw owner.CreateException(HaruStatus.InvalidPngImage,
+                            "PNG pHYs chunk is invalid or out of order.");
 
                     sawPhysicalPixels = true;
                     break;
@@ -204,14 +217,15 @@ internal static class PngImageLoader
                     goto Done;
                 default:
                     if (IsCriticalChunk(type))
-                        throw owner.CreateException(HaruStatus.InvalidPngImage, $"PNG contains an unsupported critical chunk '{type}'.");
+                        throw owner.CreateException(HaruStatus.InvalidPngImage,
+                            $"PNG contains an unsupported critical chunk '{type}'.");
                     break;
             }
 
             offset = nextOffset;
         }
 
-Done:
+        Done:
         if (!sawEnd || offset != data.Length)
             throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG stream does not contain a valid IEND chunk.");
 
@@ -249,7 +263,8 @@ Done:
         var interlaceMethod = chunk[12];
 
         if (compressionMethod != 0 || filterMethod != 0 || interlaceMethod is not (0 or 1))
-            throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG compression, filter, or interlace method is unsupported.");
+            throw owner.CreateException(HaruStatus.InvalidPngImage,
+                "PNG compression, filter, or interlace method is unsupported.");
 
         return new PngHeader((int)width, (int)height, bitDepth, colorType, interlaceMethod);
     }
@@ -260,7 +275,7 @@ Done:
         {
             0 => header.BitDepth is 1 or 2 or 4 or 8 or 16,
             2 => header.BitDepth is 8 or 16,
-            3 => (header.BitDepth is 1 or 2 or 4 or 8) && palette is not null,
+            3 => header.BitDepth is 1 or 2 or 4 or 8 && palette is not null,
             4 => header.BitDepth is 8 or 16,
             6 => header.BitDepth is 8 or 16,
             _ => false
@@ -272,10 +287,12 @@ Done:
         if (palette is not null)
         {
             if (header.ColorType is 0 or 4)
-                throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG PLTE chunk is not valid for grayscale images.");
+                throw owner.CreateException(HaruStatus.InvalidPngImage,
+                    "PNG PLTE chunk is not valid for grayscale images.");
 
             if (header.ColorType == 3 && palette.Length / 3 > 1 << header.BitDepth)
-                throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG palette has too many entries for the bit depth.");
+                throw owner.CreateException(HaruStatus.InvalidPngImage,
+                    "PNG palette has too many entries for the bit depth.");
         }
 
         if (transparency is not null)
@@ -289,20 +306,23 @@ Done:
             };
 
             if (!transparencyValid)
-                throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG tRNS chunk is not valid for this image format.");
+                throw owner.CreateException(HaruStatus.InvalidPngImage,
+                    "PNG tRNS chunk is not valid for this image format.");
         }
     }
 
     private static void EnsureHeader(PngHeader? header, PdfDocument owner)
     {
         if (header is null)
-            throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG IHDR chunk must appear before image data chunks.");
+            throw owner.CreateException(HaruStatus.InvalidPngImage,
+                "PNG IHDR chunk must appear before image data chunks.");
     }
 
     private static PngHeader RequireHeader(PngHeader? header, PdfDocument owner)
     {
         if (header is null)
-            throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG IHDR chunk must appear before image data chunks.");
+            throw owner.CreateException(HaruStatus.InvalidPngImage,
+                "PNG IHDR chunk must appear before image data chunks.");
 
         return header.Value;
     }
@@ -322,32 +342,38 @@ Done:
             throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG chunk type is invalid.");
     }
 
-    private static bool IsCriticalChunk(string type) => type[0] is >= 'A' and <= 'Z';
+    private static bool IsCriticalChunk(string type)
+    {
+        return type[0] is >= 'A' and <= 'Z';
+    }
 
-    private static void ValidateBackgroundChunk(PngHeader header, bool sawPalette, byte[]? palette, ReadOnlySpan<byte> chunk, PdfDocument owner)
+    private static void ValidateBackgroundChunk(PngHeader header, bool sawPalette, byte[]? palette,
+        ReadOnlySpan<byte> chunk, PdfDocument owner)
     {
         switch (header.ColorType)
         {
             case 0 or 4:
                 if (chunk.Length != 2 || !IsValidSample(ReadUInt16(chunk, 0), header.BitDepth))
-                    throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG bKGD chunk is invalid for grayscale images.");
+                    throw owner.CreateException(HaruStatus.InvalidPngImage,
+                        "PNG bKGD chunk is invalid for grayscale images.");
                 break;
             case 2 or 6:
                 if (chunk.Length != 6
                     || !IsValidSample(ReadUInt16(chunk, 0), header.BitDepth)
                     || !IsValidSample(ReadUInt16(chunk, 2), header.BitDepth)
                     || !IsValidSample(ReadUInt16(chunk, 4), header.BitDepth))
-                {
-                    throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG bKGD chunk is invalid for truecolor images.");
-                }
+                    throw owner.CreateException(HaruStatus.InvalidPngImage,
+                        "PNG bKGD chunk is invalid for truecolor images.");
 
                 break;
             case 3:
                 if (!sawPalette || palette is null || chunk.Length != 1 || chunk[0] >= palette.Length / 3)
-                    throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG bKGD chunk is invalid for indexed-color images.");
+                    throw owner.CreateException(HaruStatus.InvalidPngImage,
+                        "PNG bKGD chunk is invalid for indexed-color images.");
                 break;
             default:
-                throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG bKGD chunk is invalid for this image format.");
+                throw owner.CreateException(HaruStatus.InvalidPngImage,
+                    "PNG bKGD chunk is invalid for this image format.");
         }
     }
 
@@ -368,10 +394,9 @@ Done:
 
         var maxBits = header.ColorType == 3 ? 8 : header.BitDepth;
         foreach (var value in chunk)
-        {
             if (value == 0 || value > maxBits)
-                throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG sBIT chunk contains an invalid significant-bit value.");
-        }
+                throw owner.CreateException(HaruStatus.InvalidPngImage,
+                    "PNG sBIT chunk contains an invalid significant-bit value.");
     }
 
     private static void ValidateTimeChunk(ReadOnlySpan<byte> chunk, PdfDocument owner)
@@ -443,7 +468,10 @@ Done:
         }
     }
 
-    private static bool IsValidSample(int value, int bitDepth) => bitDepth == 16 || value < 1 << bitDepth;
+    private static bool IsValidSample(int value, int bitDepth)
+    {
+        return bitDepth == 16 || value < 1 << bitDepth;
+    }
 
     private static PngChromaticities ReadChromaticities(ReadOnlySpan<byte> chunk, PdfDocument owner)
     {
@@ -593,7 +621,8 @@ Done:
         return output;
     }
 
-    private static void ScatterPassRow(byte[] passRow, byte[] output, PngHeader header, Adam7Pass pass, int passY, int finalRowBytes)
+    private static void ScatterPassRow(byte[] passRow, byte[] output, PngHeader header, Adam7Pass pass, int passY,
+        int finalRowBytes)
     {
         var y = pass.YStart + passY * pass.YStep;
         var finalRowOffset = y * finalRowBytes;
@@ -604,7 +633,8 @@ Done:
             for (var px = 0; px < passWidth; px++)
             {
                 var x = pass.XStart + px * pass.XStep;
-                SetPackedSample(output, finalRowOffset, header.BitDepth, x, GetPackedSample(passRow, 0, header.BitDepth, px));
+                SetPackedSample(output, finalRowOffset, header.BitDepth, x,
+                    GetPackedSample(passRow, 0, header.BitDepth, px));
             }
 
             return;
@@ -652,7 +682,10 @@ Done:
         }
     }
 
-    private static int Left(byte[] row, int index, int bytesPerPixel) => index >= bytesPerPixel ? row[index - bytesPerPixel] : 0;
+    private static int Left(byte[] row, int index, int bytesPerPixel)
+    {
+        return index >= bytesPerPixel ? row[index - bytesPerPixel] : 0;
+    }
 
     private static int Paeth(int left, int up, int upLeft)
     {
@@ -667,7 +700,8 @@ Done:
         return distanceUp <= distanceUpLeft ? up : upLeft;
     }
 
-    private static PngImageData BuildImage(byte[] decoded, PngHeader header, byte[]? palette, byte[]? transparency, PngColorManagementData? colorManagement, PdfDocument owner)
+    private static PngImageData BuildImage(byte[] decoded, PngHeader header, byte[]? palette, byte[]? transparency,
+        PngColorManagementData? colorManagement, PdfDocument owner)
     {
         return header.ColorType switch
         {
@@ -680,7 +714,8 @@ Done:
         };
     }
 
-    private static PngImageData BuildMetadata(PngHeader header, byte[]? palette, byte[]? transparency, PngColorManagementData? colorManagement, PdfDocument owner)
+    private static PngImageData BuildMetadata(PngHeader header, byte[]? palette, byte[]? transparency,
+        PngColorManagementData? colorManagement, PdfDocument owner)
     {
         var requiresImmediateImageData = RequiresImmediateImageData(header, transparency);
 
@@ -713,13 +748,16 @@ Done:
                 colorManagement,
                 requiresImmediateImageData),
             3 => BuildIndexedMetadata(header, palette!, colorManagement, requiresImmediateImageData),
-            4 => new PngImageData([], header.Width, header.Height, 8, PdfColorSpace.DeviceGray, null, null, null, null, 0, colorManagement, true),
-            6 => new PngImageData([], header.Width, header.Height, 8, PdfColorSpace.DeviceRgb, null, null, null, null, 0, colorManagement, true),
+            4 => new PngImageData([], header.Width, header.Height, 8, PdfColorSpace.DeviceGray, null, null, null, null,
+                0, colorManagement, true),
+            6 => new PngImageData([], header.Width, header.Height, 8, PdfColorSpace.DeviceRgb, null, null, null, null,
+                0, colorManagement, true),
             _ => throw owner.CreateException(HaruStatus.InvalidPngImage, "PNG color type is unsupported.")
         };
     }
 
-    private static PngImageData BuildIndexedMetadata(PngHeader header, byte[] palette, PngColorManagementData? colorManagement, bool requiresImmediateImageData)
+    private static PngImageData BuildIndexedMetadata(PngHeader header, byte[] palette,
+        PngColorManagementData? colorManagement, bool requiresImmediateImageData)
     {
         var paletteEntries = palette.Length / 3;
         return new PngImageData(
@@ -747,21 +785,25 @@ Done:
         };
     }
 
-    private static PngImageData BuildGrayImage(byte[] decoded, PngHeader header, byte[]? transparency, PngColorManagementData? colorManagement)
+    private static PngImageData BuildGrayImage(byte[] decoded, PngHeader header, byte[]? transparency,
+        PngColorManagementData? colorManagement)
     {
         var bitsPerComponent = header.BitDepth == 16 ? 8 : header.BitDepth;
         var imageData = header.BitDepth == 16 ? Strip16BitSamples(decoded, 1) : decoded;
         var colorMask = GrayColorMask(header, transparency);
 
-        return new PngImageData(imageData, header.Width, header.Height, bitsPerComponent, PdfColorSpace.DeviceGray, null, null, colorMask, null, 0, colorManagement);
+        return new PngImageData(imageData, header.Width, header.Height, bitsPerComponent, PdfColorSpace.DeviceGray,
+            null, null, colorMask, null, 0, colorManagement);
     }
 
-    private static PngImageData BuildRgbImage(byte[] decoded, PngHeader header, byte[]? transparency, PngColorManagementData? colorManagement)
+    private static PngImageData BuildRgbImage(byte[] decoded, PngHeader header, byte[]? transparency,
+        PngColorManagementData? colorManagement)
     {
         var imageData = header.BitDepth == 16 ? Strip16BitSamples(decoded, 3) : decoded;
         var colorMask = RgbColorMask(header, transparency);
 
-        return new PngImageData(imageData, header.Width, header.Height, 8, PdfColorSpace.DeviceRgb, null, null, colorMask, null, 0, colorManagement);
+        return new PngImageData(imageData, header.Width, header.Height, 8, PdfColorSpace.DeviceRgb, null, null,
+            colorMask, null, 0, colorManagement);
     }
 
     private static int[]? GrayColorMask(PngHeader header, byte[]? transparency)
@@ -784,7 +826,8 @@ Done:
         return [r, r, g, g, b, b];
     }
 
-    private static PngImageData BuildIndexedImage(byte[] decoded, PngHeader header, byte[] palette, byte[]? transparency, PngColorManagementData? colorManagement)
+    private static PngImageData BuildIndexedImage(byte[] decoded, PngHeader header, byte[] palette,
+        byte[]? transparency, PngColorManagementData? colorManagement)
     {
         var paletteEntries = palette.Length / 3;
         var colorSpace = new PdfArray([
@@ -797,10 +840,12 @@ Done:
             ? CreatePaletteSoftMask(decoded, header.Width, header.Height, header.BitDepth, transparency)
             : null;
 
-        return new PngImageData(decoded, header.Width, header.Height, header.BitDepth, PdfColorSpace.Indexed, colorSpace, softMask, null, palette, paletteEntries - 1, colorManagement);
+        return new PngImageData(decoded, header.Width, header.Height, header.BitDepth, PdfColorSpace.Indexed,
+            colorSpace, softMask, null, palette, paletteEntries - 1, colorManagement);
     }
 
-    private static PngImageData BuildGrayAlphaImage(byte[] decoded, PngHeader header, PngColorManagementData? colorManagement, PdfDocument owner)
+    private static PngImageData BuildGrayAlphaImage(byte[] decoded, PngHeader header,
+        PngColorManagementData? colorManagement, PdfDocument owner)
     {
         var pixelCount = CheckedMultiply(header.Width, header.Height, owner);
         var image = new byte[pixelCount];
@@ -815,10 +860,12 @@ Done:
             source += header.BitDepth == 16 ? 2 : 1;
         }
 
-        return new PngImageData(image, header.Width, header.Height, 8, PdfColorSpace.DeviceGray, null, mask, null, null, 0, colorManagement);
+        return new PngImageData(image, header.Width, header.Height, 8, PdfColorSpace.DeviceGray, null, mask, null, null,
+            0, colorManagement);
     }
 
-    private static PngImageData BuildRgbaImage(byte[] decoded, PngHeader header, PngColorManagementData? colorManagement, PdfDocument owner)
+    private static PngImageData BuildRgbaImage(byte[] decoded, PngHeader header,
+        PngColorManagementData? colorManagement, PdfDocument owner)
     {
         var pixelCount = CheckedMultiply(header.Width, header.Height, owner);
         var image = new byte[CheckedMultiply(pixelCount, 3, owner)];
@@ -838,7 +885,8 @@ Done:
             source += header.BitDepth == 16 ? 2 : 1;
         }
 
-        return new PngImageData(image, header.Width, header.Height, 8, PdfColorSpace.DeviceRgb, null, mask, null, null, 0, colorManagement);
+        return new PngImageData(image, header.Width, header.Height, 8, PdfColorSpace.DeviceRgb, null, mask, null, null,
+            0, colorManagement);
     }
 
     private static byte[] Strip16BitSamples(byte[] decoded, int channels)
@@ -856,7 +904,8 @@ Done:
         return output;
     }
 
-    private static byte[] CreatePaletteSoftMask(byte[] indexedData, int width, int height, int bitDepth, byte[] transparency)
+    private static byte[] CreatePaletteSoftMask(byte[] indexedData, int width, int height, int bitDepth,
+        byte[] transparency)
     {
         var rowBytes = RowBytes(width, bitDepth);
         var mask = new byte[width * height];
@@ -892,15 +941,30 @@ Done:
         data[byteIndex] = (byte)((data[byteIndex] & ~mask) | ((sample << shift) & mask));
     }
 
-    private static int ScaleTransparentSample(int value, int bitDepth) => bitDepth == 16 ? value >> 8 : value;
+    private static int ScaleTransparentSample(int value, int bitDepth)
+    {
+        return bitDepth == 16 ? value >> 8 : value;
+    }
 
-    private static int RowBytes(int width, int bitsPerPixel) => (width * bitsPerPixel + 7) / 8;
+    private static int RowBytes(int width, int bitsPerPixel)
+    {
+        return (width * bitsPerPixel + 7) / 8;
+    }
 
-    private static int FilterBytesPerPixel(int bitsPerPixel) => Math.Max(1, (bitsPerPixel + 7) / 8);
+    private static int FilterBytesPerPixel(int bitsPerPixel)
+    {
+        return Math.Max(1, (bitsPerPixel + 7) / 8);
+    }
 
-    private static int PassSize(int size, int start, int step) => size <= start ? 0 : (size - start + step - 1) / step;
+    private static int PassSize(int size, int start, int step)
+    {
+        return size <= start ? 0 : (size - start + step - 1) / step;
+    }
 
-    private static uint ReadUInt32(ReadOnlySpan<byte> data, int offset) => BinaryPrimitives.ReadUInt32BigEndian(data[offset..]);
+    private static uint ReadUInt32(ReadOnlySpan<byte> data, int offset)
+    {
+        return BinaryPrimitives.ReadUInt32BigEndian(data[offset..]);
+    }
 
     private static int ReadInt32(byte[] data, int offset)
     {
@@ -908,9 +972,15 @@ Done:
         return value > int.MaxValue ? -1 : (int)value;
     }
 
-    private static int ReadUInt16(byte[] data, int offset) => ReadUInt16(data.AsSpan(), offset);
+    private static int ReadUInt16(byte[] data, int offset)
+    {
+        return ReadUInt16(data.AsSpan(), offset);
+    }
 
-    private static int ReadUInt16(ReadOnlySpan<byte> data, int offset) => BinaryPrimitives.ReadUInt16BigEndian(data.Slice(offset, 2));
+    private static int ReadUInt16(ReadOnlySpan<byte> data, int offset)
+    {
+        return BinaryPrimitives.ReadUInt16BigEndian(data.Slice(offset, 2));
+    }
 
     private static int CheckedMultiply(int left, int right, PdfDocument owner)
     {
@@ -964,11 +1034,14 @@ internal sealed record PngColorManagementData(
 {
     internal static readonly PngColorManagementData Empty = new(null, null, null, null);
 
-    internal static PngColorManagementData Srgb(string renderingIntent) => new(
-        0.45455,
-        PngChromaticities.Srgb,
-        renderingIntent,
-        null);
+    internal static PngColorManagementData Srgb(string renderingIntent)
+    {
+        return new PngColorManagementData(
+            0.45455,
+            PngChromaticities.Srgb,
+            renderingIntent,
+            null);
+    }
 }
 
 internal readonly record struct PngChromaticities(
@@ -981,7 +1054,8 @@ internal readonly record struct PngChromaticities(
     double BlueX,
     double BlueY)
 {
-    internal static readonly PngChromaticities Srgb = new(0.3127, 0.3290, 0.6400, 0.3300, 0.3000, 0.6000, 0.1500, 0.0600);
+    internal static readonly PngChromaticities Srgb = new(0.3127, 0.3290, 0.6400, 0.3300, 0.3000, 0.6000, 0.1500,
+        0.0600);
 
     internal bool IsValid =>
         IsValidPoint(WhiteX, WhiteY)

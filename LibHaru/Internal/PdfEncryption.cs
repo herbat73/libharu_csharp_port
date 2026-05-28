@@ -21,20 +21,20 @@ internal sealed class PdfEncryption
         0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A
     ];
 
+    private readonly HaruError _error;
+    private byte[] _encryptionKey = new byte[MaxKeyLength + 5];
+
     private byte[] _ownerPassword = PaddingString.ToArray();
     private byte[] _userPassword = PaddingString.ToArray();
-    private byte[] _encryptionKey = new byte[MaxKeyLength + 5];
-    private readonly HaruError _error;
-    private bool _hasEncryptionKey;
 
     internal PdfEncryption(HaruError error)
     {
         _error = error;
         PermissionValue = PermissionPad
-            | (int)Permission.EnablePrint
-            | (int)Permission.EnableEditAll
-            | (int)Permission.EnableCopy
-            | (int)Permission.EnableEdit;
+                          | (int)Permission.EnablePrint
+                          | (int)Permission.EnableEditAll
+                          | (int)Permission.EnableCopy
+                          | (int)Permission.EnableEdit;
     }
 
     internal PdfEncryptMode Mode { get; private set; } = PdfEncryptMode.R2;
@@ -49,7 +49,7 @@ internal sealed class PdfEncryption
 
     internal byte[] FileId { get; private set; } = new byte[IdLength];
 
-    internal bool IsPrepared => _hasEncryptionKey;
+    internal bool IsPrepared { get; private set; }
 
     internal void SetPassword(string ownerPassword, string? userPassword)
     {
@@ -58,13 +58,13 @@ internal sealed class PdfEncryption
 
         _ownerPassword = PadOrTruncatePassword(ownerPassword);
         _userPassword = PadOrTruncatePassword(userPassword);
-        _hasEncryptionKey = false;
+        IsPrepared = false;
     }
 
     internal void SetPermission(uint permission)
     {
         PermissionValue = unchecked((int)permission);
-        _hasEncryptionKey = false;
+        IsPrepared = false;
     }
 
     internal void SetMode(PdfEncryptMode mode, uint keyLength)
@@ -73,7 +73,7 @@ internal sealed class PdfEncryption
         {
             Mode = mode;
             KeyLengthBytes = 5;
-            _hasEncryptionKey = false;
+            IsPrepared = false;
             return;
         }
 
@@ -84,11 +84,12 @@ internal sealed class PdfEncryption
             keyLength = 16;
 
         if (keyLength is < 5 or > 16)
-            throw CreateException(HaruStatus.InvalidEncryptKeyLen, "Revision 3 encryption key length must be between 5 and 16 bytes.");
+            throw CreateException(HaruStatus.InvalidEncryptKeyLen,
+                "Revision 3 encryption key length must be between 5 and 16 bytes.");
 
         Mode = mode;
         KeyLengthBytes = (int)keyLength;
-        _hasEncryptionKey = false;
+        IsPrepared = false;
     }
 
     internal void Prepare(byte[] fileId)
@@ -99,7 +100,7 @@ internal sealed class PdfEncryption
         FileId = fileId.ToArray();
         OwnerKey = CreateOwnerKey();
         _encryptionKey = CreateEncryptionKey();
-        _hasEncryptionKey = true;
+        IsPrepared = true;
         UserKey = CreateUserKey();
     }
 
@@ -134,7 +135,7 @@ internal sealed class PdfEncryption
             return false;
 
         _encryptionKey = encryptionKey;
-        _hasEncryptionKey = true;
+        IsPrepared = true;
         return true;
     }
 
@@ -144,7 +145,7 @@ internal sealed class PdfEncryption
             return false;
 
         _encryptionKey = encryptionKey;
-        _hasEncryptionKey = true;
+        IsPrepared = true;
         return true;
     }
 
@@ -156,7 +157,7 @@ internal sealed class PdfEncryption
     internal static bool ValidateDictionary(PdfDictionary? dictionary)
     {
         return dictionary is not null
-            && dictionary.ObjectClass == (PdfObjectClass.Dictionary | PdfObjectClass.Encrypt);
+               && dictionary.ObjectClass == (PdfObjectClass.Dictionary | PdfObjectClass.Encrypt);
     }
 
     internal static PdfEncryption FromPreparedStandardSecurity(
@@ -174,7 +175,7 @@ internal sealed class PdfEncryption
         encryption.OwnerKey = CopyFixedLength(ownerKey, PasswordLength, error, "Owner key must be 32 bytes.");
         encryption.UserKey = CopyFixedLength(userKey, PasswordLength, error, "User key must be 32 bytes.");
         encryption.FileId = CopyFixedLength(fileId, IdLength, error, "File identifier must be 16 bytes.");
-        encryption._hasEncryptionKey = false;
+        encryption.IsPrepared = false;
         Array.Clear(encryption._encryptionKey);
         return encryption;
     }
@@ -189,8 +190,9 @@ internal sealed class PdfEncryption
         if (data.Length == 0)
             return [];
 
-        if (!_hasEncryptionKey)
-            throw CreateException(HaruStatus.InvalidOperation, "Encryption key has not been prepared or authenticated.");
+        if (!IsPrepared)
+            throw CreateException(HaruStatus.InvalidOperation,
+                "Encryption key has not been prepared or authenticated.");
 
         Span<byte> objectSeed = stackalloc byte[KeyLengthBytes + 5];
         _encryptionKey.AsSpan(0, KeyLengthBytes).CopyTo(objectSeed);
@@ -205,7 +207,8 @@ internal sealed class PdfEncryption
         return Rc4.Crypt(objectDigest.AsSpan(0, objectKeyLength), data);
     }
 
-    internal static byte[] CreateFileId(IReadOnlyDictionary<PdfInfoType, string> infoValues, int objectCount, HaruError error)
+    internal static byte[] CreateFileId(IReadOnlyDictionary<PdfInfoType, string> infoValues, int objectCount,
+        HaruError error)
     {
         using var md5 = MD5.Create();
 
@@ -247,7 +250,6 @@ internal sealed class PdfEncryption
         var ownerKey = Rc4.Crypt(digest.AsSpan(0, KeyLengthBytes), _userPassword);
 
         if (Mode == PdfEncryptMode.R3)
-        {
             for (var i = 1; i <= 19; i++)
             {
                 var newKey = new byte[KeyLengthBytes];
@@ -257,7 +259,6 @@ internal sealed class PdfEncryption
 
                 ownerKey = Rc4.Crypt(newKey, ownerKey);
             }
-        }
 
         return ownerKey;
     }
@@ -281,10 +282,8 @@ internal sealed class PdfEncryption
         var digest = md5.GetHashAndReset();
 
         if (Mode == PdfEncryptMode.R3)
-        {
             for (var i = 0; i < 50; i++)
                 digest = MD5.HashData(digest.AsSpan(0, KeyLengthBytes));
-        }
 
         var key = new byte[MaxKeyLength + 5];
         digest.AsSpan(0, Math.Min(digest.Length, MaxKeyLength)).CopyTo(key);
@@ -307,7 +306,8 @@ internal sealed class PdfEncryption
         md5.TransformBlock(PaddingString, 0, PaddingString.Length, null, 0);
         md5.TransformFinalBlock(FileId, 0, FileId.Length);
 
-        var digest = md5.Hash ?? throw CreateException(HaruStatus.InvalidOperation, "MD5 did not produce a user key digest.");
+        var digest = md5.Hash ??
+                     throw CreateException(HaruStatus.InvalidOperation, "MD5 did not produce a user key digest.");
         var digest2 = Rc4.Crypt(encryptionKey[..KeyLengthBytes], digest);
 
         for (var i = 1; i <= 19; i++)
@@ -343,10 +343,8 @@ internal sealed class PdfEncryption
         var paddedUserPassword = OwnerKey.ToArray();
 
         if (Mode == PdfEncryptMode.R3)
-        {
             for (var i = 19; i >= 1; i--)
                 paddedUserPassword = Rc4.Crypt(CreateXorKey(ownerDigest, KeyLengthBytes, i), paddedUserPassword);
-        }
 
         paddedUserPassword = Rc4.Crypt(ownerDigest.AsSpan(0, KeyLengthBytes), paddedUserPassword);
         return TryValidateUserPassword(paddedUserPassword, out encryptionKey);
@@ -357,10 +355,8 @@ internal sealed class PdfEncryption
         var digest = MD5.HashData(paddedOwnerPassword);
 
         if (Mode == PdfEncryptMode.R3)
-        {
             for (var i = 0; i < 50; i++)
                 digest = MD5.HashData(digest.AsSpan(0, KeyLengthBytes));
-        }
 
         return digest;
     }
@@ -370,7 +366,8 @@ internal sealed class PdfEncryption
         if (mode == PdfEncryptMode.R2)
         {
             if (keyLengthBytes != 5)
-                throw CreateException(HaruStatus.InvalidEncryptKeyLen, "Revision 2 encryption key length must be 5 bytes.");
+                throw CreateException(HaruStatus.InvalidEncryptKeyLen,
+                    "Revision 2 encryption key length must be 5 bytes.");
 
             Mode = mode;
             KeyLengthBytes = 5;
@@ -381,7 +378,8 @@ internal sealed class PdfEncryption
             throw CreateException(HaruStatus.InvalidParameter, "Unsupported encryption mode.");
 
         if (keyLengthBytes is < 5 or > 16)
-            throw CreateException(HaruStatus.InvalidEncryptKeyLen, "Revision 3 encryption key length must be between 5 and 16 bytes.");
+            throw CreateException(HaruStatus.InvalidEncryptKeyLen,
+                "Revision 3 encryption key length must be between 5 and 16 bytes.");
 
         Mode = mode;
         KeyLengthBytes = keyLengthBytes;

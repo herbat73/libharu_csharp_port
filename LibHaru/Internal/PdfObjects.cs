@@ -1,5 +1,6 @@
-using System.Text;
+using System.Globalization;
 using System.IO.Compression;
+using System.Text;
 
 namespace LibHaru.Internal;
 
@@ -169,11 +170,17 @@ internal sealed class PdfNull : PdfObject
     {
     }
 
-    internal static PdfNull New() => new();
-
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Null;
 
-    protected override void WriteValueTo(PdfWriter writer) => writer.WriteAscii("null");
+    internal static PdfNull New()
+    {
+        return new PdfNull();
+    }
+
+    protected override void WriteValueTo(PdfWriter writer)
+    {
+        writer.WriteAscii("null");
+    }
 }
 
 internal sealed class PdfBoolean : PdfObject
@@ -187,7 +194,10 @@ internal sealed class PdfBoolean : PdfObject
 
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Boolean;
 
-    protected override void WriteValueTo(PdfWriter writer) => writer.WriteAscii(Value ? "true" : "false");
+    protected override void WriteValueTo(PdfWriter writer)
+    {
+        writer.WriteAscii(Value ? "true" : "false");
+    }
 }
 
 internal sealed class PdfInteger : PdfObject
@@ -201,7 +211,10 @@ internal sealed class PdfInteger : PdfObject
 
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Number;
 
-    protected override void WriteValueTo(PdfWriter writer) => writer.WriteAscii(Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    protected override void WriteValueTo(PdfWriter writer)
+    {
+        writer.WriteAscii(Value.ToString(CultureInfo.InvariantCulture));
+    }
 }
 
 internal sealed class PdfReal : PdfObject
@@ -215,7 +228,10 @@ internal sealed class PdfReal : PdfObject
 
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Real;
 
-    protected override void WriteValueTo(PdfWriter writer) => writer.WriteAscii(writer.FormatReal(Value));
+    protected override void WriteValueTo(PdfWriter writer)
+    {
+        writer.WriteAscii(writer.FormatReal(Value));
+    }
 }
 
 internal sealed class PdfName : PdfObject
@@ -243,7 +259,10 @@ internal sealed class PdfName : PdfObject
 
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Name;
 
-    internal static PdfName Create(string value, HaruError? error) => new(value, error);
+    internal static PdfName Create(string value, HaruError? error)
+    {
+        return new PdfName(value, error);
+    }
 
     protected override void WriteValueTo(PdfWriter writer)
     {
@@ -254,7 +273,6 @@ internal sealed class PdfName : PdfObject
     internal static void WriteEscapedName(PdfWriter writer, string value)
     {
         foreach (var ch in Encoding.ASCII.GetBytes(value))
-        {
             if (IsRegularNameByte(ch))
             {
                 writer.WriteBytes(stackalloc[] { ch });
@@ -262,26 +280,25 @@ internal sealed class PdfName : PdfObject
             else
             {
                 writer.WriteAscii("#");
-                writer.WriteAscii(ch.ToString("X2", System.Globalization.CultureInfo.InvariantCulture));
+                writer.WriteAscii(ch.ToString("X2", CultureInfo.InvariantCulture));
             }
-        }
     }
 
     private static bool IsRegularNameByte(byte value)
     {
         return value is >= 33 and <= 126
-            && value is not (byte)'#'
-            && value is not (byte)'%'
-            && value is not (byte)'('
-            && value is not (byte)')'
-            && value is not (byte)'<'
-            && value is not (byte)'>'
-            && value is not (byte)'['
-            && value is not (byte)']'
-            && value is not (byte)'{'
-            && value is not (byte)'}'
-            && value is not (byte)'/'
-            && value is not (byte)' ';
+               && value is not (byte)'#'
+               && value is not (byte)'%'
+               && value is not (byte)'('
+               && value is not (byte)')'
+               && value is not (byte)'<'
+               && value is not (byte)'>'
+               && value is not (byte)'['
+               && value is not (byte)']'
+               && value is not (byte)'{'
+               && value is not (byte)'}'
+               && value is not (byte)'/'
+               && value is not (byte)' ';
     }
 
     private static HaruException CreateNameException(HaruError? error, uint status, string message)
@@ -301,11 +318,17 @@ internal sealed class PdfString : PdfObject
         _bytes = bytes;
     }
 
-    internal static PdfString FromText(string value) => new(Latin1.GetBytes(value));
-
-    internal static PdfString FromBytes(ReadOnlySpan<byte> value) => new(value.ToArray());
-
     internal override PdfObjectClass ObjectClass => PdfObjectClass.String;
+
+    internal static PdfString FromText(string value)
+    {
+        return new PdfString(Latin1.GetBytes(value));
+    }
+
+    internal static PdfString FromBytes(ReadOnlySpan<byte> value)
+    {
+        return new PdfString(value.ToArray());
+    }
 
     protected override void WriteValueTo(PdfWriter writer)
     {
@@ -318,7 +341,6 @@ internal sealed class PdfString : PdfObject
         writer.WriteAscii("(");
 
         foreach (var b in _bytes)
-        {
             switch (b)
             {
                 case (byte)'\\':
@@ -355,7 +377,6 @@ internal sealed class PdfString : PdfObject
 
                     break;
             }
-        }
 
         writer.WriteAscii(")");
     }
@@ -370,9 +391,12 @@ internal sealed class PdfBinary : PdfObject
         _bytes = bytes.ToArray();
     }
 
-    internal static PdfBinary FromBytes(ReadOnlySpan<byte> bytes) => new(bytes);
-
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Binary;
+
+    internal static PdfBinary FromBytes(ReadOnlySpan<byte> bytes)
+    {
+        return new PdfBinary(bytes);
+    }
 
     protected override void WriteValueTo(PdfWriter writer)
     {
@@ -391,13 +415,22 @@ internal sealed class PdfDirectObject : PdfObject
         _bytes = bytes.ToArray();
     }
 
-    internal static PdfDirectObject FromAscii(string value) => new(Encoding.ASCII.GetBytes(value));
-
-    internal static PdfDirectObject FromBytes(ReadOnlySpan<byte> value) => new(value);
-
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Direct;
 
-    protected override void WriteValueTo(PdfWriter writer) => writer.WriteBytes(_bytes);
+    internal static PdfDirectObject FromAscii(string value)
+    {
+        return new PdfDirectObject(Encoding.ASCII.GetBytes(value));
+    }
+
+    internal static PdfDirectObject FromBytes(ReadOnlySpan<byte> value)
+    {
+        return new PdfDirectObject(value);
+    }
+
+    protected override void WriteValueTo(PdfWriter writer)
+    {
+        writer.WriteBytes(_bytes);
+    }
 }
 
 internal sealed class PdfArray : PdfObject
@@ -436,13 +469,25 @@ internal sealed class PdfArray : PdfObject
         Add(value.Value);
     }
 
-    internal void AddNumber(int value) => Add(new PdfInteger(value));
+    internal void AddNumber(int value)
+    {
+        Add(new PdfInteger(value));
+    }
 
-    internal void AddReal(double value) => Add(new PdfReal(value));
+    internal void AddReal(double value)
+    {
+        Add(new PdfReal(value));
+    }
 
-    internal void AddNull() => Add(PdfNull.New());
+    internal void AddNull()
+    {
+        Add(PdfNull.New());
+    }
 
-    internal void AddName(string value) => Add(PdfName.Create(value, Error));
+    internal void AddName(string value)
+    {
+        Add(PdfName.Create(value, Error));
+    }
 
     internal void Insert(int index, PdfObject value)
     {
@@ -480,7 +525,10 @@ internal sealed class PdfArray : PdfObject
         return item;
     }
 
-    internal void Clear() => _items.Clear();
+    internal void Clear()
+    {
+        _items.Clear();
+    }
 
     protected override void AttachChildErrors(HaruError? error)
     {
@@ -555,27 +603,22 @@ internal sealed class PdfArray : PdfObject
 internal sealed class PdfDictionary : PdfObject
 {
     private readonly List<KeyValuePair<string, PdfObject>> _items = [];
-    private PdfObjectClass _subclass;
 
     internal int Count => _items.Count;
 
-    internal override PdfObjectClass ObjectClass => PdfObjectClass.Dictionary | _subclass;
+    internal override PdfObjectClass ObjectClass => PdfObjectClass.Dictionary | Subclass;
 
-    internal PdfObjectClass Subclass
-    {
-        get => _subclass;
-        set => _subclass = value;
-    }
+    internal PdfObjectClass Subclass { get; set; }
 
     internal bool IsEncryptionDictionary
     {
-        get => _subclass == PdfObjectClass.Encrypt;
+        get => Subclass == PdfObjectClass.Encrypt;
         set
         {
             if (value)
-                _subclass = PdfObjectClass.Encrypt;
-            else if (_subclass == PdfObjectClass.Encrypt)
-                _subclass = 0;
+                Subclass = PdfObjectClass.Encrypt;
+            else if (Subclass == PdfObjectClass.Encrypt)
+                Subclass = 0;
         }
     }
 
@@ -584,7 +627,6 @@ internal sealed class PdfDictionary : PdfObject
         ValidateKey(key);
 
         for (var i = 0; i < _items.Count; i++)
-        {
             if (StringComparer.Ordinal.Equals(_items[i].Key, key))
             {
                 if (ReferenceEquals(_items[i].Value.ResolveProxy(), value.ResolveProxy()))
@@ -593,7 +635,6 @@ internal sealed class PdfDictionary : PdfObject
                 _items[i] = new KeyValuePair<string, PdfObject>(key, PrepareCollectionValue(value));
                 return;
             }
-        }
 
         if (_items.Count >= PdfObjectLimits.MaxDictionaryItems)
             throw CreateException(HaruStatus.DictCountErr, "PDF dictionary item count exceeded the Haru limit.");
@@ -614,20 +655,24 @@ internal sealed class PdfDictionary : PdfObject
         ValidateKey(key);
 
         for (var i = 0; i < _items.Count; i++)
-        {
             if (StringComparer.Ordinal.Equals(_items[i].Key, key))
             {
                 _items.RemoveAt(i);
                 return true;
             }
-        }
 
         return false;
     }
 
-    internal void Clear() => _items.Clear();
+    internal void Clear()
+    {
+        _items.Clear();
+    }
 
-    internal void SetName(string key, string value) => Set(key, PdfName.Create(value, Error));
+    internal void SetName(string key, string value)
+    {
+        Set(key, PdfName.Create(value, Error));
+    }
 
     internal T? Get<T>(string key)
         where T : PdfObject
@@ -654,7 +699,8 @@ internal sealed class PdfDictionary : PdfObject
 
             var value = item.Value.ResolveProxy();
             if (!value.MatchesClass(expectedClass))
-                throw CreateException(HaruStatus.DictItemUnexpectedType, "PDF dictionary item has an unexpected object class.");
+                throw CreateException(HaruStatus.DictItemUnexpectedType,
+                    "PDF dictionary item has an unexpected object class.");
 
             return value;
         }
@@ -667,10 +713,8 @@ internal sealed class PdfDictionary : PdfObject
         var target = value.ResolveProxy();
 
         foreach (var item in _items)
-        {
             if (ReferenceEquals(item.Value.ResolveProxy(), target))
                 return item.Key;
-        }
 
         return null;
     }
@@ -690,7 +734,9 @@ internal sealed class PdfDictionary : PdfObject
         }
 
         using (writer.SuppressEncryption())
+        {
             WriteDictionaryBody(writer);
+        }
     }
 
     private void WriteDictionaryBody(PdfWriter writer)
@@ -748,9 +794,9 @@ internal sealed class PdfDictionary : PdfObject
 
 internal sealed class PdfStreamObject : PdfObject
 {
+    private bool _clearDelayedDataAfterWrite;
     private byte[] _data;
     private Func<byte[]>? _delayedDataProvider;
-    private bool _clearDelayedDataAfterWrite;
 
     internal PdfStreamObject(byte[] data)
     {
@@ -793,13 +839,17 @@ internal sealed class PdfStreamObject : PdfObject
             : new PdfArray([decodeParms]);
     }
 
-    protected override void AttachChildErrors(HaruError? error) => Dictionary.AttachError(error);
+    protected override void AttachChildErrors(HaruError? error)
+    {
+        Dictionary.AttachError(error);
+    }
 
     protected override void WriteValueTo(PdfWriter writer)
     {
         var delayed = _delayedDataProvider is not null;
         if (delayed)
-            _data = _delayedDataProvider!() ?? throw new InvalidOperationException("Delayed stream data provider returned null.");
+            _data = _delayedDataProvider!() ??
+                    throw new InvalidOperationException("Delayed stream data provider returned null.");
 
         try
         {
@@ -902,8 +952,10 @@ internal sealed class PdfStreamObject : PdfObject
     {
         using var output = new MemoryStream();
 
-        using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, true))
+        {
             zlib.Write(data, 0, data.Length);
+        }
 
         return output.ToArray();
     }
@@ -989,9 +1041,9 @@ internal sealed class PdfIndirectReference : PdfObject
 
     protected override void WriteValueTo(PdfWriter writer)
     {
-        writer.WriteAscii(ObjectNumber.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        writer.WriteAscii(ObjectNumber.ToString(CultureInfo.InvariantCulture));
         writer.WriteAscii(" ");
-        writer.WriteAscii(GenerationNumber.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        writer.WriteAscii(GenerationNumber.ToString(CultureInfo.InvariantCulture));
         writer.WriteAscii(" R");
     }
 }

@@ -46,7 +46,8 @@ public static class ObjectSemantics
 
         dictionary.Set("Child", child);
         dictionary.Set("Child", child);
-        Require(ReferenceEquals(dictionary.Get<PdfDictionary>("Child"), child), "Re-setting the same dictionary value changed the child.");
+        Require(ReferenceEquals(dictionary.Get<PdfDictionary>("Child"), child),
+            "Re-setting the same dictionary value changed the child.");
 
         var stream = new PdfStreamObject([1, 2, 3])
         {
@@ -76,12 +77,15 @@ public static class ObjectSemantics
         var firstObject = pdf.AddObject(first);
         pdf.AddObject(second);
 
-        Require(ReferenceEquals(first.Get<PdfDictionary>("Target"), target.Value), "Dictionary proxy lookup did not unwrap the target object.");
+        Require(ReferenceEquals(first.Get<PdfDictionary>("Target"), target.Value),
+            "Dictionary proxy lookup did not unwrap the target object.");
 
         var bytes = pdf.SaveToStream();
         var latin1 = Encoding.Latin1.GetString(bytes);
-        Require(latin1.Contains($"{firstObject.ObjectNumber} 0 obj", StringComparison.Ordinal), "Fixture object was not written.");
-        Require(latin1.Contains($"/Target {target.ObjectNumber} 0 R", StringComparison.Ordinal), "Indirect dictionary value was not written as a reference.");
+        Require(latin1.Contains($"{firstObject.ObjectNumber} 0 obj", StringComparison.Ordinal),
+            "Fixture object was not written.");
+        Require(latin1.Contains($"/Target {target.ObjectNumber} 0 R", StringComparison.Ordinal),
+            "Indirect dictionary value was not written as a reference.");
     }
 
     private static void CollectionLookupsValidateObjectClasses()
@@ -93,30 +97,35 @@ public static class ObjectSemantics
         array.Add(new PdfName("Example"));
 
         var arrayTypeError = RequireThrows(() => array.GetItem<PdfString>(0));
-        Require(arrayTypeError.Status == HaruStatus.ArrayItemUnexpectedType, "Array type validation raised the wrong status.");
+        Require(arrayTypeError.Status == HaruStatus.ArrayItemUnexpectedType,
+            "Array type validation raised the wrong status.");
 
         var missingError = RequireThrows(() => array.GetItem<PdfName>(1));
-        Require(missingError.Status == HaruStatus.ArrayItemNotFound, "Array missing-item validation raised the wrong status.");
+        Require(missingError.Status == HaruStatus.ArrayItemNotFound,
+            "Array missing-item validation raised the wrong status.");
 
         var dict = new PdfDictionary();
         dict.AttachError(error);
         dict.Set("Answer", new PdfInteger(42));
 
         var dictTypeError = RequireThrows(() => dict.Get<PdfString>("Answer"));
-        Require(dictTypeError.Status == HaruStatus.DictItemUnexpectedType, "Dictionary type validation raised the wrong status.");
+        Require(dictTypeError.Status == HaruStatus.DictItemUnexpectedType,
+            "Dictionary type validation raised the wrong status.");
         Require(dict.Get<PdfString>("Missing") is null, "Missing dictionary lookup should return null.");
 
         var streamArray = new PdfArray();
         streamArray.AttachError(error);
         streamArray.Add(new PdfDictionary());
         var streamArrayError = RequireThrows(() => streamArray.GetItem<PdfStreamObject>(0));
-        Require(streamArrayError.Status == HaruStatus.ArrayItemUnexpectedType, "Array managed-type validation raised the wrong status.");
+        Require(streamArrayError.Status == HaruStatus.ArrayItemUnexpectedType,
+            "Array managed-type validation raised the wrong status.");
 
         var streamDict = new PdfDictionary();
         streamDict.AttachError(error);
         streamDict.Set("Plain", new PdfDictionary());
         var streamDictError = RequireThrows(() => streamDict.Get<PdfStreamObject>("Plain"));
-        Require(streamDictError.Status == HaruStatus.DictItemUnexpectedType, "Dictionary managed-type validation raised the wrong status.");
+        Require(streamDictError.Status == HaruStatus.DictItemUnexpectedType,
+            "Dictionary managed-type validation raised the wrong status.");
     }
 
     private static void CollectionLookupsRequireExactSubclasses()
@@ -130,14 +139,16 @@ public static class ObjectSemantics
         array.Add(pages);
 
         var arraySubtypeError = RequireThrows(() => array.GetItem(0, PdfObjectClass.Dictionary | PdfObjectClass.Font));
-        Require(arraySubtypeError.Status == HaruStatus.ArrayItemUnexpectedType, "Array subclass validation raised the wrong status.");
+        Require(arraySubtypeError.Status == HaruStatus.ArrayItemUnexpectedType,
+            "Array subclass validation raised the wrong status.");
 
         var font = new PdfDictionary { Subclass = PdfObjectClass.Font };
         font.SetName("Type", "Font");
         var dict = new PdfDictionary();
         dict.AttachError(error);
         dict.Set("Font", font);
-        Require(ReferenceEquals(dict.GetItem("Font", PdfObjectClass.Dictionary | PdfObjectClass.Font), font), "Dictionary subclass lookup did not return the font object.");
+        Require(ReferenceEquals(dict.GetItem("Font", PdfObjectClass.Dictionary | PdfObjectClass.Font), font),
+            "Dictionary subclass lookup did not return the font object.");
 
         var catalog = new PdfDictionary { Subclass = PdfObjectClass.Catalog };
         catalog.SetName("Type", "Catalog");
@@ -145,8 +156,10 @@ public static class ObjectSemantics
         wrongDict.AttachError(error);
         wrongDict.Set("Catalog", catalog);
 
-        var dictSubtypeError = RequireThrows(() => wrongDict.GetItem("Catalog", PdfObjectClass.Dictionary | PdfObjectClass.Font));
-        Require(dictSubtypeError.Status == HaruStatus.DictItemUnexpectedType, "Dictionary subclass validation raised the wrong status.");
+        var dictSubtypeError =
+            RequireThrows(() => wrongDict.GetItem("Catalog", PdfObjectClass.Dictionary | PdfObjectClass.Font));
+        Require(dictSubtypeError.Status == HaruStatus.DictItemUnexpectedType,
+            "Dictionary subclass validation raised the wrong status.");
     }
 
     private static void ModuleValidatorsRejectSubclassMismatches()
@@ -168,7 +181,8 @@ public static class ObjectSemantics
             ((PdfArray)destination.DestinationObject.Value).Subclass = PdfObjectClass.Outline;
 
             var ex = RequireThrows(() => pdf.SetOpenAction(destination));
-            Require(ex.Status == HaruStatus.InvalidDestination, "Destination subclass validation raised the wrong status.");
+            Require(ex.Status == HaruStatus.InvalidDestination,
+                "Destination subclass validation raised the wrong status.");
         }
 
         using (var pdf = PdfDocument.New())
@@ -187,7 +201,8 @@ public static class ObjectSemantics
             ((PdfDictionary)annotation.AnnotationObject.Value).Subclass = PdfObjectClass.Page;
 
             var ex = RequireThrows(() => annotation.SetIcon(PdfAnnotIcon.Note));
-            Require(ex.Status == HaruStatus.InvalidAnnotation, "Annotation subclass validation raised the wrong status.");
+            Require(ex.Status == HaruStatus.InvalidAnnotation,
+                "Annotation subclass validation raised the wrong status.");
         }
 
         using (var pdf = PdfDocument.New())
@@ -196,7 +211,8 @@ public static class ObjectSemantics
             ((PdfDictionary)extGState.GraphicsStateObject.Value).Subclass = PdfObjectClass.ExtGStateReadOnly;
 
             var ex = RequireThrows(() => extGState.SetAlphaFill(0.5));
-            Require(ex.Status == HaruStatus.ExtGStateReadOnly, "Read-only ExtGState validation raised the wrong status.");
+            Require(ex.Status == HaruStatus.ExtGStateReadOnly,
+                "Read-only ExtGState validation raised the wrong status.");
         }
 
         using (var pdf = PdfDocument.New())
@@ -204,7 +220,8 @@ public static class ObjectSemantics
             var shading = pdf.CreateShading(PdfShadingType.FreeFormTriangleMesh, PdfColorSpace.DeviceRgb, 0, 10, 0, 10);
             ((PdfStreamObject)shading.ShadingObject.Value).Subclass = PdfObjectClass.XObject;
 
-            var ex = RequireThrows(() => shading.AddVertexRGB(PdfShadingFreeFormTriangleMeshEdgeFlag.NoConnection, 1, 1, 0, 0, 0));
+            var ex = RequireThrows(() =>
+                shading.AddVertexRGB(PdfShadingFreeFormTriangleMeshEdgeFlag.NoConnection, 1, 1, 0, 0, 0));
             Require(ex.Status == HaruStatus.InvalidShadingType, "Shading subclass validation raised the wrong status.");
         }
 
@@ -433,10 +450,13 @@ public static class ObjectSemantics
         encryptedWriter.EndObject();
 
         var encrypted = Encoding.Latin1.GetString(encryptedStream.ToArray());
-        Require(encrypted.StartsWith("<", StringComparison.Ordinal), "Encrypted string should be emitted as a hex string.");
-        Require(encrypted.EndsWith(">", StringComparison.Ordinal), "Encrypted string should be emitted as a hex string.");
+        Require(encrypted.StartsWith("<", StringComparison.Ordinal),
+            "Encrypted string should be emitted as a hex string.");
+        Require(encrypted.EndsWith(">", StringComparison.Ordinal),
+            "Encrypted string should be emitted as a hex string.");
         Require(!encrypted.Contains(secret, StringComparison.Ordinal), "Encrypted string leaked plaintext.");
-        Require(!encrypted.Contains("\\(", StringComparison.Ordinal), "Encrypted string was literal-escaped instead of encrypted.");
+        Require(!encrypted.Contains("\\(", StringComparison.Ordinal),
+            "Encrypted string was literal-escaped instead of encrypted.");
     }
 
     private static HaruException RequireThrows(Action action)

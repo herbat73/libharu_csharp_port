@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using LibHaru;
@@ -190,7 +191,7 @@ public static class CompatibilityDemos
         HPDF_UseJPEncodings(pdf);
 
         var fontPath = Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf");
-        var fontName = HPDF_LoadTTFontFromFile(pdf, fontPath, embedding: true);
+        var fontName = HPDF_LoadTTFontFromFile(pdf, fontPath, true);
         var cp936Font = HPDF_GetFont(pdf, fontName, "GBK-EUC-H");
         var cp932Font = HPDF_GetFont(pdf, fontName, "90ms-RKSJ-H");
 
@@ -362,8 +363,10 @@ public static class CompatibilityDemos
             RequireToken("/ID [<", 1));
 
         var latin1 = Encoding.Latin1.GetString(File.ReadAllBytes(pdfPath));
-        Require(!latin1.Contains(text, StringComparison.Ordinal), "Encrypted compatibility demo leaked plaintext page content.");
-        Require(!latin1.Contains("/Length 128", StringComparison.Ordinal), "Revision 2 encryption should not emit a 128-bit Length entry.");
+        Require(!latin1.Contains(text, StringComparison.Ordinal),
+            "Encrypted compatibility demo leaked plaintext page content.");
+        Require(!latin1.Contains("/Length 128", StringComparison.Ordinal),
+            "Revision 2 encryption should not emit a 128-bit Length entry.");
         return report;
     }
 
@@ -491,7 +494,8 @@ public static class CompatibilityDemos
             var sampleFont = HPDF_GetFont(pdf, fontName);
             var expectedEncoding = fontName is "Symbol" or "ZapfDingbats" ? "FontSpecific" : "StandardEncoding";
             Require(HPDF_Font_GetFontName(sampleFont) == fontName, $"Unexpected font name for {fontName}.");
-            Require(HPDF_Font_GetEncodingName(sampleFont) == expectedEncoding, $"{fontName} did not use {expectedEncoding} by default.");
+            Require(HPDF_Font_GetEncodingName(sampleFont) == expectedEncoding,
+                $"{fontName} did not use {expectedEncoding} by default.");
 
             HPDF_Page_SetFontAndSize(page, defaultFont, 9);
             HPDF_Page_ShowText(page, fontName);
@@ -510,8 +514,8 @@ public static class CompatibilityDemos
             RequireToken("/Type /Page\n", 1),
             RequireToken("/Font <<", 1),
             RequireToken("/Subtype /Type1", fontNames.Length),
-            RequireToken(" Tf\n", (fontNames.Length * 2) + 2),
-            RequireToken(" Tj\n", (fontNames.Length * 2) + 2),
+            RequireToken(" Tf\n", fontNames.Length * 2 + 2),
+            RequireToken(" Tj\n", fontNames.Length * 2 + 2),
             RequireToken("Font Demo", 1),
             RequireToken("<Standard Type1 fonts samples>", 1),
             RequireToken(sampleText, fontNames.Length)
@@ -903,19 +907,24 @@ public static class CompatibilityDemos
         HPDF_Page_SetTextLeading(page, 20);
 
         DrawTextRectDemo(page, font, new PdfRect(25, 505, 200, 545), sample, PdfTextAlignment.Left, "HPDF_TALIGN_LEFT");
-        DrawTextRectDemo(page, font, new PdfRect(220, 505, 395, 545), sample, PdfTextAlignment.Right, "HPDF_TALIGN_RIGHT");
-        DrawTextRectDemo(page, font, new PdfRect(25, 435, 200, 475), sample, PdfTextAlignment.Center, "HPDF_TALIGN_CENTER");
-        DrawTextRectDemo(page, font, new PdfRect(220, 435, 395, 475), sample, PdfTextAlignment.Justify, "HPDF_TALIGN_JUSTIFY");
+        DrawTextRectDemo(page, font, new PdfRect(220, 505, 395, 545), sample, PdfTextAlignment.Right,
+            "HPDF_TALIGN_RIGHT");
+        DrawTextRectDemo(page, font, new PdfRect(25, 435, 200, 475), sample, PdfTextAlignment.Center,
+            "HPDF_TALIGN_CENTER");
+        DrawTextRectDemo(page, font, new PdfRect(220, 435, 395, 475), sample, PdfTextAlignment.Justify,
+            "HPDF_TALIGN_JUSTIFY");
 
         HPDF_Page_GSave(page);
         HPDF_Page_Concat(page, 1, Math.Tan(5 / 180.0 * Math.PI), Math.Tan(10 / 180.0 * Math.PI), 1, 25, 350);
-        DrawTextRectDemo(page, font, new PdfRect(0, 0, 175, 40), sample, PdfTextAlignment.Left, "Skewed coordinate system");
+        DrawTextRectDemo(page, font, new PdfRect(0, 0, 175, 40), sample, PdfTextAlignment.Left,
+            "Skewed coordinate system");
         HPDF_Page_GRestore(page);
 
         HPDF_Page_GSave(page);
         var radians = 5 / 180.0 * Math.PI;
         HPDF_Page_Concat(page, Math.Cos(radians), Math.Sin(radians), -Math.Sin(radians), Math.Cos(radians), 220, 350);
-        DrawTextRectDemo(page, font, new PdfRect(0, 0, 175, 40), sample, PdfTextAlignment.Left, "Rotated coordinate system");
+        DrawTextRectDemo(page, font, new PdfRect(0, 0, 175, 40), sample, PdfTextAlignment.Left,
+            "Rotated coordinate system");
         HPDF_Page_GRestore(page);
 
         HPDF_Page_SetGrayStroke(page, 0);
@@ -934,7 +943,8 @@ public static class CompatibilityDemos
             var pointRadians = angle / 180.0 * Math.PI;
             var x = 210 + Math.Cos(pointRadians) * 122;
             var y = 190 + Math.Sin(pointRadians) * 122;
-            HPDF_Page_SetTextMatrix(page, Math.Cos(textRadians), Math.Sin(textRadians), -Math.Sin(textRadians), Math.Cos(textRadians), x, y);
+            HPDF_Page_SetTextMatrix(page, Math.Cos(textRadians), Math.Sin(textRadians), -Math.Sin(textRadians),
+                Math.Cos(textRadians), x, y);
             HPDF_Page_ShowText(page, ch.ToString());
             angle -= step;
         }
@@ -977,7 +987,8 @@ public static class CompatibilityDemos
         for (var i = 0; i < icons.Length; i++)
         {
             var x = 70 + i * 65;
-            var annotation = HPDF_Page_CreateTextAnnot(page, new PdfRect(x, 620, x + 20, 640), $"Annotation with {icons[i]} icon");
+            var annotation = HPDF_Page_CreateTextAnnot(page, new PdfRect(x, 620, x + 20, 640),
+                $"Annotation with {icons[i]} icon");
             HPDF_TextAnnot_SetIcon(annotation, icons[i]);
             HPDF_TextAnnot_SetOpened(annotation, i == 0);
             HPDF_Annot_SetRGBColor(annotation, new PdfRgbColor(i / 7.0, 0.2, 1.0 - i / 7.0));
@@ -1067,7 +1078,8 @@ public static class CompatibilityDemos
         var rad2 = 20.0 / 180 * Math.PI;
 
         HPDF_Page_GSave(page);
-        HPDF_Page_Concat(page, imageWidth, Math.Tan(rad1) * imageWidth, Math.Tan(rad2) * imageHeight, imageHeight, x, y);
+        HPDF_Page_Concat(page, imageWidth, Math.Tan(rad1) * imageWidth, Math.Tan(rad2) * imageHeight, imageHeight, x,
+            y);
         HPDF_Page_ExecuteXObject(page, image);
         HPDF_Page_GRestore(page);
         ShowImageDescription(page, font, x, y, "Skewing image");
@@ -1076,7 +1088,8 @@ public static class CompatibilityDemos
         var rad = 30.0 / 180 * Math.PI;
 
         HPDF_Page_GSave(page);
-        HPDF_Page_Concat(page, imageWidth * Math.Cos(rad), imageWidth * Math.Sin(rad), imageHeight * -Math.Sin(rad), imageHeight * Math.Cos(rad), x, y);
+        HPDF_Page_Concat(page, imageWidth * Math.Cos(rad), imageWidth * Math.Sin(rad), imageHeight * -Math.Sin(rad),
+            imageHeight * Math.Cos(rad), x, y);
         HPDF_Page_ExecuteXObject(page, image);
         HPDF_Page_GRestore(page);
         ShowImageDescription(page, font, x, y, "Rotating image");
@@ -1141,7 +1154,7 @@ public static class CompatibilityDemos
             0, 0, 255,
             255, 255, 255
         };
-        var raw = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb, 8);
+        var raw = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb);
         var rawPath = Path.Combine(outputDir, "compat-raw-rgb.bin");
         File.WriteAllBytes(rawPath, rawRgb);
         var rawFromFile = HPDF_LoadRawImageFromFile(pdf, rawPath, 2, 2, PdfColorSpace.DeviceRgb);
@@ -1157,7 +1170,8 @@ public static class CompatibilityDemos
         HPDF_Page_DrawImage(page, rawFromFile, 400, HPDF_Page_GetHeight(page) - 170, 100, 100);
 
         var jpegName = HPDF_Page_GetXObjectName(page, jpeg);
-        Require(jpegName.StartsWith("Im", StringComparison.Ordinal), "JPEG image was not assigned an XObject resource name.");
+        Require(jpegName.StartsWith("Im", StringComparison.Ordinal),
+            "JPEG image was not assigned an XObject resource name.");
         HPDF_Page_ExecuteXObject(page, jpeg);
 
         HPDF_SaveToFile(pdf, pdfPath);
@@ -1194,8 +1208,10 @@ public static class CompatibilityDemos
         HPDF_Page_EndText(page);
 
         HPDF_Page_SetFontAndSize(page, font, 12);
-        DrawJpegDemoImage(pdf, page, Path.Combine(repoRoot, "demo", "images", "rgb.jpg"), "rgb.jpg", 70, HPDF_Page_GetHeight(page) - 410, "24bit color image");
-        DrawJpegDemoImage(pdf, page, Path.Combine(repoRoot, "demo", "images", "gray.jpg"), "gray.jpg", 340, HPDF_Page_GetHeight(page) - 410, "8bit grayscale image");
+        DrawJpegDemoImage(pdf, page, Path.Combine(repoRoot, "demo", "images", "rgb.jpg"), "rgb.jpg", 70,
+            HPDF_Page_GetHeight(page) - 410, "24bit color image");
+        DrawJpegDemoImage(pdf, page, Path.Combine(repoRoot, "demo", "images", "gray.jpg"), "gray.jpg", 340,
+            HPDF_Page_GetHeight(page) - 410, "8bit grayscale image");
 
         HPDF_SaveToFile(pdf, pdfPath);
 
@@ -1296,7 +1312,7 @@ public static class CompatibilityDemos
             HPDF_Page_EndText(page);
 
             HPDF_Page_SetLineWidth(page, 0.5);
-            for (var x = 20.0; x <= 20 + (sampleText.Length / 2.0 * 30); x += 30)
+            for (var x = 20.0; x <= 20 + sampleText.Length / 2.0 * 30; x += 30)
             {
                 HPDF_Page_MoveTo(page, x, 12);
                 HPDF_Page_LineTo(page, x, 10);
@@ -1431,7 +1447,8 @@ public static class CompatibilityDemos
         using var pdf = HPDF_New();
         HPDF_SetCompressionMode(pdf, CompressionMode.None);
 
-        var fontName = HPDF_LoadTTFontFromFile(pdf, Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf"), embedding: true);
+        var fontName =
+            HPDF_LoadTTFontFromFile(pdf, Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf"), true);
         var font = HPDF_GetFont(pdf, fontName, "WinAnsiEncoding");
         var page = HPDF_AddPage(pdf);
         HPDF_Page_SetSize(page, PdfPageSize.Letter, PdfPageDirection.Portrait);
@@ -1455,14 +1472,16 @@ public static class CompatibilityDemos
         HPDF_EmbeddedFile_SetSubtype(embedded, "text/xml");
         HPDF_EmbeddedFile_SetSize(embedded, new FileInfo(attachmentPath).Length);
         HPDF_EmbeddedFile_SetCreationDate(embedded, new DateTimeOffset(2024, 1, 20, 17, 10, 30, TimeSpan.FromHours(1)));
-        HPDF_EmbeddedFile_SetLastModificationDate(embedded, new DateTimeOffset(2024, 2, 5, 11, 14, 45, TimeSpan.FromHours(1)));
+        HPDF_EmbeddedFile_SetLastModificationDate(embedded,
+            new DateTimeOffset(2024, 2, 5, 11, 14, 45, TimeSpan.FromHours(1)));
 
         HPDF_SetInfoAttr(pdf, PdfInfoType.Title, "PDF-A Title");
         HPDF_SetInfoAttr(pdf, PdfInfoType.Subject, "PDF-A Subject");
         HPDF_SetInfoAttr(pdf, PdfInfoType.Author, "PDF-A Author");
         HPDF_SetInfoAttr(pdf, PdfInfoType.Creator, "libharu");
         HPDF_PDFA_SetPDFAConformance(pdf, PdfPdfAType.PdfA3B);
-        HPDF_AppendOutputIntents(pdf, "sRGB", File.ReadAllBytes(Path.Combine(repoRoot, "demo", "pdf_a", "device_rgb.icc")), "sRGB IEC61966-2.1");
+        HPDF_AppendOutputIntents(pdf, "sRGB",
+            File.ReadAllBytes(Path.Combine(repoRoot, "demo", "pdf_a", "device_rgb.icc")), "sRGB IEC61966-2.1");
         HPDF_SetXmpMetadata(pdf, CreatePdfAXmpExtensionMetadata());
 
         HPDF_SaveToFile(pdf, pdfPath);
@@ -1492,10 +1511,14 @@ public static class CompatibilityDemos
         HPDF_Page_SetWidth(page, 550);
         HPDF_Page_SetHeight(page, 500);
 
-        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "basn3p02.png"), "basn3p02.png", 100, 300);
-        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "basn0g08.png"), "basn0g08.png", 260, 300);
-        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "basn6a08.png"), "basn6a08.png", 100, 140);
-        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "maskimage.png"), "maskimage.png", 260, 140);
+        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "basn3p02.png"), "basn3p02.png",
+            100, 300);
+        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "basn0g08.png"), "basn0g08.png",
+            260, 300);
+        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "basn6a08.png"), "basn6a08.png",
+            100, 140);
+        DrawPngDemoImage(pdf, page, font, Path.Combine(repoRoot, "demo", "pngsuite", "maskimage.png"), "maskimage.png",
+            260, 140);
 
         HPDF_SaveToFile(pdf, pdfPath);
 
@@ -1522,9 +1545,13 @@ public static class CompatibilityDemos
         HPDF_Page_SetWidth(page, 400);
         HPDF_Page_SetHeight(page, 220);
 
-        var rgb = HPDF_LoadRawImageFromFile(pdf, Path.Combine(repoRoot, "demo", "rawimage", "32_32_rgb.dat"), 32, 32, PdfColorSpace.DeviceRgb);
-        var gray = HPDF_LoadRawImageFromFile(pdf, Path.Combine(repoRoot, "demo", "rawimage", "32_32_gray.dat"), 32, 32, PdfColorSpace.DeviceGray);
-        var twoColor = HPDF_LoadRawImageFromMem(pdf, File.ReadAllBytes(Path.Combine(repoRoot, "demo", "rawimage", "32_32_2color.dat")), 32, 32, PdfColorSpace.DeviceGray, 1);
+        var rgb = HPDF_LoadRawImageFromFile(pdf, Path.Combine(repoRoot, "demo", "rawimage", "32_32_rgb.dat"), 32, 32,
+            PdfColorSpace.DeviceRgb);
+        var gray = HPDF_LoadRawImageFromFile(pdf, Path.Combine(repoRoot, "demo", "rawimage", "32_32_gray.dat"), 32, 32,
+            PdfColorSpace.DeviceGray);
+        var twoColor = HPDF_LoadRawImageFromMem(pdf,
+            File.ReadAllBytes(Path.Combine(repoRoot, "demo", "rawimage", "32_32_2color.dat")), 32, 32,
+            PdfColorSpace.DeviceGray, 1);
         HPDF_Page_DrawImage(page, rgb, 60, 120, 64, 64);
         HPDF_Page_DrawImage(page, gray, 160, 120, 64, 64);
         HPDF_Page_DrawImage(page, twoColor, 260, 120, 64, 64);
@@ -1572,9 +1599,8 @@ public static class CompatibilityDemos
         var font = HPDF_GetFont(pdf, "Courier");
         var pages = transitions.Select(_ => HPDF_AddPage(pdf)).ToArray();
         for (var i = 0; i < pages.Length; i++)
-        {
-            DrawSlideShowPage(pages[i], transitions[i].Item1, transitions[i].Item2, font, i > 0 ? pages[i - 1] : null, i < pages.Length - 1 ? pages[i + 1] : null);
-        }
+            DrawSlideShowPage(pages[i], transitions[i].Item1, transitions[i].Item2, font, i > 0 ? pages[i - 1] : null,
+                i < pages.Length - 1 ? pages[i + 1] : null);
 
         HPDF_SaveToFile(pdf, pdfPath);
 
@@ -1602,9 +1628,11 @@ public static class CompatibilityDemos
 
         var page = HPDF_AddPage(pdf);
         var titleFont = HPDF_GetFont(pdf, "Helvetica");
-        var fontName = HPDF_LoadTTFontFromFile(pdf, Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf"), embedding: true);
+        var fontName =
+            HPDF_LoadTTFontFromFile(pdf, Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf"), true);
         var detailFont = HPDF_GetFont(pdf, fontName);
-        DrawTtFontSample(page, titleFont, detailFont, fontName, "The quick brown fox jumps over the lazy dog.", "Embedded Subset");
+        DrawTtFontSample(page, titleFont, detailFont, fontName, "The quick brown fox jumps over the lazy dog.",
+            "Embedded Subset");
 
         HPDF_SaveToFile(pdf, pdfPath);
 
@@ -1626,9 +1654,11 @@ public static class CompatibilityDemos
 
         var page = HPDF_AddPage(pdf);
         var titleFont = HPDF_GetFont(pdf, "Helvetica");
-        var fontName = HPDF_LoadTTFontFromFile(pdf, Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf"), embedding: true);
+        var fontName =
+            HPDF_LoadTTFontFromFile(pdf, Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf"), true);
         var detailFont = HPDF_GetFont(pdf, fontName, "90msp-RKSJ-H");
-        DrawTtFontSample(page, titleFont, detailFont, fontName, ReadLatin1Line(Path.Combine(repoRoot, "demo", "mbtext", "sjis.txt")), "90msp-RKSJ-H");
+        DrawTtFontSample(page, titleFont, detailFont, fontName,
+            ReadLatin1Line(Path.Combine(repoRoot, "demo", "mbtext", "sjis.txt")), "90msp-RKSJ-H");
 
         HPDF_SaveToFile(pdf, pdfPath);
 
@@ -1729,7 +1759,8 @@ public static class CompatibilityDemos
             RequireToken("/ID [<", 1));
 
         var latin1 = Encoding.Latin1.GetString(File.ReadAllBytes(pdfPath));
-        Require(!latin1.Contains(text, StringComparison.Ordinal), "Encrypted permission demo leaked plaintext page content.");
+        Require(!latin1.Contains(text, StringComparison.Ordinal),
+            "Encrypted permission demo leaked plaintext page content.");
         return report;
     }
 
@@ -1768,7 +1799,8 @@ public static class CompatibilityDemos
         var demoDir = Path.Combine(repoRoot, "demo");
         var sources = Directory
             .EnumerateFiles(demoDir, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(static path => path.EndsWith(".c", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase))
+            .Where(static path => path.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
+                                  path.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase))
             .Select(Path.GetFileName)
             .Where(static name => name is not null)
             .Select(static name => name!)
@@ -1802,7 +1834,8 @@ public static class CompatibilityDemos
         return string.Join(Environment.NewLine, lines);
     }
 
-    private static void DrawCMapPage(PdfPage page, PdfFont titleFont, PdfFont font, byte highByte, byte lowFrom, byte lowTo, string label)
+    private static void DrawCMapPage(PdfPage page, PdfFont titleFont, PdfFont font, byte highByte, byte lowFrom,
+        byte lowTo, string label)
     {
         const int cellWidth = 20;
         const int cellHeight = 20;
@@ -1832,8 +1865,8 @@ public static class CompatibilityDemos
         HPDF_Page_SetFontAndSize(page, titleFont, 8);
         for (var i = 0; i < 16; i++)
         {
-            HPDF_Page_TextOut(page, 67 + i * cellWidth, 365, i.ToString("X", System.Globalization.CultureInfo.InvariantCulture));
-            HPDF_Page_TextOut(page, 47, 345 - i * cellHeight, i.ToString("X", System.Globalization.CultureInfo.InvariantCulture));
+            HPDF_Page_TextOut(page, 67 + i * cellWidth, 365, i.ToString("X", CultureInfo.InvariantCulture));
+            HPDF_Page_TextOut(page, 47, 345 - i * cellHeight, i.ToString("X", CultureInfo.InvariantCulture));
         }
 
         HPDF_Page_SetFontAndSize(page, font, 14);
@@ -1843,12 +1876,13 @@ public static class CompatibilityDemos
             var row = (low - lowFrom) / 16;
             var x = 62 + nibble * cellWidth;
             var y = 340 - row * cellHeight;
-            var text = Encoding.Latin1.GetString([(byte)highByte, (byte)low]);
+            var text = Encoding.Latin1.GetString([highByte, low]);
             HPDF_Page_TextOut(page, x, y, text);
         }
     }
 
-    private static void DrawTextRectDemo(PdfPage page, PdfFont font, PdfRect rect, string text, PdfTextAlignment alignment, string label)
+    private static void DrawTextRectDemo(PdfPage page, PdfFont font, PdfRect rect, string text,
+        PdfTextAlignment alignment, string label)
     {
         HPDF_Page_Rectangle(page, rect.Left, rect.Bottom, rect.Right - rect.Left, rect.Top - rect.Bottom);
         HPDF_Page_Stroke(page);
@@ -1907,7 +1941,8 @@ public static class CompatibilityDemos
         }
     }
 
-    private static void DrawPngDemoImage(PdfDocument pdf, PdfPage page, PdfFont font, string path, string fileName, double x, double y)
+    private static void DrawPngDemoImage(PdfDocument pdf, PdfPage page, PdfFont font, string path, string fileName,
+        double x, double y)
     {
         var image = HPDF_LoadPngImageFromFile(pdf, path);
         Require(HPDF_Image_Validate(image), $"{fileName} failed PNG validation.");
@@ -1917,14 +1952,15 @@ public static class CompatibilityDemos
         HPDF_Page_TextOut(page, x, y - 30, HPDF_Image_GetColorSpace(image));
     }
 
-    private static void DrawSlideShowPage(PdfPage page, string caption, PdfTransitionStyle style, PdfFont font, PdfPage? previous, PdfPage? next)
+    private static void DrawSlideShowPage(PdfPage page, string caption, PdfTransitionStyle style, PdfFont font,
+        PdfPage? previous, PdfPage? next)
     {
         HPDF_Page_SetWidth(page, 800);
         HPDF_Page_SetHeight(page, 600);
         var index = (int)style;
-        var r = ((index * 47) % 100) / 100.0;
-        var g = ((index * 71 + 20) % 100) / 100.0;
-        var b = ((index * 29 + 40) % 100) / 100.0;
+        var r = index * 47 % 100 / 100.0;
+        var g = (index * 71 + 20) % 100 / 100.0;
+        var b = (index * 29 + 40) % 100 / 100.0;
 
         HPDF_Page_SetRGBFill(page, r, g, b);
         HPDF_Page_Rectangle(page, 0, 0, 800, 600);
@@ -1958,7 +1994,8 @@ public static class CompatibilityDemos
         }
     }
 
-    private static void DrawTtFontSample(PdfPage page, PdfFont titleFont, PdfFont detailFont, string fontName, string sampleText, string suffix)
+    private static void DrawTtFontSample(PdfPage page, PdfFont titleFont, PdfFont detailFont, string fontName,
+        string sampleText, string suffix)
     {
         HPDF_Page_SetFontAndSize(page, titleFont, 10);
         HPDF_Page_BeginText(page);
@@ -2005,25 +2042,27 @@ public static class CompatibilityDemos
             .ToArray();
     }
 
-    private static string CreatePdfAXmpExtensionMetadata() =>
-        """
-        <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-        <x:xmpmeta xmlns:x="adobe:ns:meta/">
-          <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-            <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-              <pdfaid:part>3</pdfaid:part>
-              <pdfaid:conformance>B</pdfaid:conformance>
-            </rdf:Description>
-            <rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">
-              <fx:DocumentType>INVOICE</fx:DocumentType>
-              <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
-              <fx:Version>1.0</fx:Version>
-              <fx:ConformanceLevel>EN 16931</fx:ConformanceLevel>
-            </rdf:Description>
-          </rdf:RDF>
-        </x:xmpmeta>
-        <?xpacket end="w"?>
-        """;
+    private static string CreatePdfAXmpExtensionMetadata()
+    {
+        return """
+               <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+               <x:xmpmeta xmlns:x="adobe:ns:meta/">
+                 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                   <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+                     <pdfaid:part>3</pdfaid:part>
+                     <pdfaid:conformance>B</pdfaid:conformance>
+                   </rdf:Description>
+                   <rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">
+                     <fx:DocumentType>INVOICE</fx:DocumentType>
+                     <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
+                     <fx:Version>1.0</fx:Version>
+                     <fx:ConformanceLevel>EN 16931</fx:ConformanceLevel>
+                   </rdf:Description>
+                 </rdf:RDF>
+               </x:xmpmeta>
+               <?xpacket end="w"?>
+               """;
+    }
 
     private static void DrawLine(PdfPage page, double x, double y, string label)
     {
@@ -2073,7 +2112,8 @@ public static class CompatibilityDemos
         HPDF_Page_Rectangle(page, x, y - 40, 220, 25);
     }
 
-    private static void DrawBlendModeGroup(PdfDocument pdf, PdfPage page, PdfBlendMode mode, string description, double x, double y)
+    private static void DrawBlendModeGroup(PdfDocument pdf, PdfPage page, PdfBlendMode mode, string description,
+        double x, double y)
     {
         HPDF_Page_GSave(page);
         var state = HPDF_CreateExtGState(pdf);
@@ -2129,7 +2169,8 @@ public static class CompatibilityDemos
         HPDF_Page_EndText(page);
     }
 
-    private static void DrawJpegDemoImage(PdfDocument pdf, PdfPage page, string path, string fileName, double x, double y, string text)
+    private static void DrawJpegDemoImage(PdfDocument pdf, PdfPage page, string path, string fileName, double x,
+        double y, string text)
     {
         var image = HPDF_LoadJpegImageFromFile(pdf, path);
         Require(HPDF_Image_Validate(image), $"{fileName} failed JPEG validation.");
@@ -2167,13 +2208,8 @@ public static class CompatibilityDemos
         for (var y = 0; y < height; y += 5)
         {
             if (y % 10 == 0)
-            {
                 HPDF_Page_SetLineWidth(page, 0.5);
-            }
-            else if (HPDF_Page_GetLineWidth(page) != 0.25)
-            {
-                HPDF_Page_SetLineWidth(page, 0.25);
-            }
+            else if (HPDF_Page_GetLineWidth(page) != 0.25) HPDF_Page_SetLineWidth(page, 0.25);
 
             HPDF_Page_MoveTo(page, 0, y);
             HPDF_Page_LineTo(page, width, y);
@@ -2192,13 +2228,8 @@ public static class CompatibilityDemos
         for (var x = 0; x < width; x += 5)
         {
             if (x % 10 == 0)
-            {
                 HPDF_Page_SetLineWidth(page, 0.5);
-            }
-            else if (HPDF_Page_GetLineWidth(page) != 0.25)
-            {
-                HPDF_Page_SetLineWidth(page, 0.25);
-            }
+            else if (HPDF_Page_GetLineWidth(page) != 0.25) HPDF_Page_SetLineWidth(page, 0.25);
 
             HPDF_Page_MoveTo(page, x, 0);
             HPDF_Page_LineTo(page, x, height);
@@ -2224,7 +2255,7 @@ public static class CompatibilityDemos
 
             HPDF_Page_BeginText(page);
             HPDF_Page_MoveTextPos(page, 5, y - 2);
-            HPDF_Page_ShowText(page, y.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            HPDF_Page_ShowText(page, y.ToString(CultureInfo.InvariantCulture));
             HPDF_Page_EndText(page);
         }
 
@@ -2233,7 +2264,7 @@ public static class CompatibilityDemos
             if (x % 50 != 0 || x <= 0)
                 continue;
 
-            var text = x.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var text = x.ToString(CultureInfo.InvariantCulture);
             HPDF_Page_BeginText(page);
             HPDF_Page_MoveTextPos(page, x, 5);
             HPDF_Page_ShowText(page, text);
@@ -2270,7 +2301,7 @@ public static class CompatibilityDemos
             {
                 HPDF_Page_BeginText(page);
                 HPDF_Page_MoveTextPos(page, x + 5, pageHeight - 75);
-                HPDF_Page_ShowText(page, (i - 1).ToString("X", System.Globalization.CultureInfo.InvariantCulture));
+                HPDF_Page_ShowText(page, (i - 1).ToString("X", CultureInfo.InvariantCulture));
                 HPDF_Page_EndText(page);
             }
         }
@@ -2287,7 +2318,7 @@ public static class CompatibilityDemos
             {
                 HPDF_Page_BeginText(page);
                 HPDF_Page_MoveTextPos(page, 45, y + 5);
-                HPDF_Page_ShowText(page, (15 - i).ToString("X", System.Globalization.CultureInfo.InvariantCulture));
+                HPDF_Page_ShowText(page, (15 - i).ToString("X", CultureInfo.InvariantCulture));
                 HPDF_Page_EndText(page);
             }
         }
@@ -2302,19 +2333,17 @@ public static class CompatibilityDemos
         HPDF_Page_BeginText(page);
 
         for (var i = 1; i < 17; i++)
+        for (var j = 1; j < 17; j++)
         {
-            for (var j = 1; j < 17; j++)
-            {
-                var code = (i - 1) * 16 + (j - 1);
-                if (code < 32)
-                    continue;
+            var code = (i - 1) * 16 + (j - 1);
+            if (code < 32)
+                continue;
 
-                var text = new string((char)code, 1);
-                var y = pageHeight - 55 - ((i - 1) * cellHeight);
-                var x = j * cellWidth + 50;
-                var centeredX = x - HPDF_Page_TextWidth(page, text) / 2;
-                HPDF_Page_TextOut(page, centeredX, y, text);
-            }
+            var text = new string((char)code, 1);
+            var y = pageHeight - 55 - (i - 1) * cellHeight;
+            var x = j * cellWidth + 50;
+            var centeredX = x - HPDF_Page_TextWidth(page, text) / 2;
+            HPDF_Page_TextOut(page, centeredX, y, text);
         }
 
         HPDF_Page_EndText(page);
@@ -2372,7 +2401,10 @@ public static class CompatibilityDemos
         HPDF_Page_SetRGBFill(page, previousFill.R, previousFill.G, previousFill.B);
     }
 
-    private static StructuralRequirement RequireToken(string token, int minimumCount) => new(token, minimumCount);
+    private static StructuralRequirement RequireToken(string token, int minimumCount)
+    {
+        return new StructuralRequirement(token, minimumCount);
+    }
 
     private static PdfStructureReport CheckPdf(string demo, string pdfPath, params StructuralRequirement[] requirements)
     {
@@ -2388,14 +2420,16 @@ public static class CompatibilityDemos
             .ToArray();
         var failures = counts
             .Where(static item => item.Actual < item.requirement.MinimumCount)
-            .Select(static item => $"{DisplayToken(item.requirement.Token)} expected >= {item.requirement.MinimumCount}, actual {item.Actual}")
+            .Select(static item =>
+                $"{DisplayToken(item.requirement.Token)} expected >= {item.requirement.MinimumCount}, actual {item.Actual}")
             .ToArray();
 
         var report = BuildStructureReport(demo, pdfPath, bytes.Length, latin1, counts);
         File.WriteAllText(Path.ChangeExtension(pdfPath, ".structure.txt"), report);
 
         if (failures.Length > 0)
-            throw new InvalidOperationException($"{demo} structural diff:{Environment.NewLine}{string.Join(Environment.NewLine, failures)}{Environment.NewLine}{Environment.NewLine}{report}");
+            throw new InvalidOperationException(
+                $"{demo} structural diff:{Environment.NewLine}{string.Join(Environment.NewLine, failures)}{Environment.NewLine}{Environment.NewLine}{report}");
 
         Console.WriteLine($"Generated {pdfPath}");
         Console.WriteLine($"{bytes.Length} bytes, structural profile matched");
@@ -2412,7 +2446,8 @@ public static class CompatibilityDemos
         var objectCount = Regex.Matches(latin1, @"(?m)^\d+ 0 obj").Count;
         var pageCount = Count(latin1, "/Type /Page") - Count(latin1, "/Type /Pages");
         var tokens = checkedCounts
-            .Select(static item => $"  {DisplayToken(item.Requirement.Token)}: {item.Actual} (expected >= {item.Requirement.MinimumCount})");
+            .Select(static item =>
+                $"  {DisplayToken(item.Requirement.Token)}: {item.Actual} (expected >= {item.Requirement.MinimumCount})");
 
         return string.Join(Environment.NewLine, [
             $"demo: {demo}",
@@ -2439,9 +2474,10 @@ public static class CompatibilityDemos
         Require(numberEnd > numberStart, $"{demo}: malformed startxref offset.");
 
         var offsetText = pdfText[numberStart..numberEnd].Trim();
-        var offset = int.Parse(offsetText, System.Globalization.CultureInfo.InvariantCulture);
+        var offset = int.Parse(offsetText, CultureInfo.InvariantCulture);
         Require(offset > 0 && offset < pdfText.Length, $"{demo}: startxref offset is outside the PDF.");
-        Require(pdfText[offset..].StartsWith("xref", StringComparison.Ordinal), $"{demo}: startxref does not point at xref.");
+        Require(pdfText[offset..].StartsWith("xref", StringComparison.Ordinal),
+            $"{demo}: startxref does not point at xref.");
     }
 
     private static int Count(string value, string needle)
@@ -2458,9 +2494,12 @@ public static class CompatibilityDemos
         return count;
     }
 
-    private static string DisplayToken(string token) => token
-        .Replace("\r", "\\r", StringComparison.Ordinal)
-        .Replace("\n", "\\n", StringComparison.Ordinal);
+    private static string DisplayToken(string token)
+    {
+        return token
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+    }
 
     private static void Require(bool condition, string message)
     {

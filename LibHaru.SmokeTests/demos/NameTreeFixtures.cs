@@ -20,7 +20,8 @@ public static class NameTreeFixtures
         var javaScript = HPDF_CreateJavaScript(pdf, "app.alert('large name tree');");
         var attachmentPath = Path.Combine(repoRoot, "demo", "pdf_a", "factur-x.xml");
 
-        VerifyNameTreeMutationResave(attachmentPath, Path.Combine(Path.GetDirectoryName(pdfPath)!, "libharu-managed-name-trees-resave.pdf"));
+        VerifyNameTreeMutationResave(attachmentPath,
+            Path.Combine(Path.GetDirectoryName(pdfPath)!, "libharu-managed-name-trees-resave.pdf"));
 
         for (var i = 0; i < 150; i++)
         {
@@ -69,7 +70,8 @@ public static class NameTreeFixtures
         HPDF_Destination_SetXYZ(secondDestination, 0, HPDF_Page_GetHeight(secondPage), 1);
 
         var initial = Encoding.Latin1.GetString(HPDF_SaveToStream(pdf));
-        Require(!initial.Contains("/Names", StringComparison.Ordinal), "Initial re-save fixture should not contain name trees.");
+        Require(!initial.Contains("/Names", StringComparison.Ordinal),
+            "Initial re-save fixture should not contain name trees.");
 
         HPDF_AddNamedDestination(pdf, "mutating-dest", firstDestination);
         HPDF_AddNamedJavaScript(pdf, "mutating-script", HPDF_CreateJavaScript(pdf, "app.alert('v1');"));
@@ -77,9 +79,12 @@ public static class NameTreeFixtures
         HPDF_EmbeddedFile_SetName(embedded, "mutating-attachment-v1.xml");
 
         var firstSave = Encoding.Latin1.GetString(HPDF_SaveToStream(pdf));
-        Require(firstSave.Contains("(mutating-dest)", StringComparison.Ordinal), "First re-save missing named destination.");
-        Require(firstSave.Contains("(mutating-script)", StringComparison.Ordinal), "First re-save missing named JavaScript.");
-        Require(firstSave.Contains("(mutating-attachment-v1.xml)", StringComparison.Ordinal), "First re-save missing embedded-file name.");
+        Require(firstSave.Contains("(mutating-dest)", StringComparison.Ordinal),
+            "First re-save missing named destination.");
+        Require(firstSave.Contains("(mutating-script)", StringComparison.Ordinal),
+            "First re-save missing named JavaScript.");
+        Require(firstSave.Contains("(mutating-attachment-v1.xml)", StringComparison.Ordinal),
+            "First re-save missing embedded-file name.");
 
         HPDF_AddNamedDestination(pdf, "mutating-dest", secondDestination);
         HPDF_AddNamedDestination(pdf, "mutating-dest-added", firstDestination);
@@ -89,12 +94,18 @@ public static class NameTreeFixtures
         HPDF_SaveToFile(pdf, pdfPath);
 
         var final = Encoding.Latin1.GetString(File.ReadAllBytes(pdfPath));
-        Require(final.Contains("(mutating-dest)", StringComparison.Ordinal), "Final re-save missing updated named destination.");
-        Require(final.Contains("(mutating-dest-added)", StringComparison.Ordinal), "Final re-save missing added named destination.");
-        Require(final.Contains("(mutating-script)", StringComparison.Ordinal), "Final re-save missing updated named JavaScript.");
-        Require(final.Contains("(mutating-script-added)", StringComparison.Ordinal), "Final re-save missing added named JavaScript.");
-        Require(final.Contains("(mutating-attachment-v2.xml)", StringComparison.Ordinal), "Final re-save missing renamed embedded-file name.");
-        Require(!final.Contains("(mutating-attachment-v1.xml)", StringComparison.Ordinal), "Final re-save retained stale embedded-file name.");
+        Require(final.Contains("(mutating-dest)", StringComparison.Ordinal),
+            "Final re-save missing updated named destination.");
+        Require(final.Contains("(mutating-dest-added)", StringComparison.Ordinal),
+            "Final re-save missing added named destination.");
+        Require(final.Contains("(mutating-script)", StringComparison.Ordinal),
+            "Final re-save missing updated named JavaScript.");
+        Require(final.Contains("(mutating-script-added)", StringComparison.Ordinal),
+            "Final re-save missing added named JavaScript.");
+        Require(final.Contains("(mutating-attachment-v2.xml)", StringComparison.Ordinal),
+            "Final re-save missing renamed embedded-file name.");
+        Require(!final.Contains("(mutating-attachment-v1.xml)", StringComparison.Ordinal),
+            "Final re-save retained stale embedded-file name.");
     }
 
     private static int Count(string value, string needle)

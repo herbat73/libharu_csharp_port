@@ -3,13 +3,14 @@ using System.IO.Compression;
 using System.Text;
 using LibHaru;
 using static LibHaru.HPdf;
+using CompressionMode = LibHaru.CompressionMode;
 
 public static class ImageFeatures
 {
     public static void Test(string repoRoot, string pdfPath)
     {
         using var pdf = HPDF_New();
-        HPDF_SetCompressionMode(pdf, LibHaru.CompressionMode.All);
+        HPDF_SetCompressionMode(pdf, CompressionMode.All);
 
         var page = HPDF_AddPage(pdf);
         var font = HPDF_GetFont(pdf, "Helvetica");
@@ -23,7 +24,7 @@ public static class ImageFeatures
             0, 0, 255,
             255, 255, 255
         };
-        var rawImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb, 8);
+        var rawImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb);
         Require(HPDF_Image_Validate(rawImage), "Raw image validator failed.");
         HPDF_Image_SetColorMask(rawImage, 255, 255, 255, 255, 255, 255);
         HPDF_Page_DrawImage(page, rawImage, 40, HPDF_Page_GetHeight(page) - 120, 48, 48);
@@ -38,12 +39,12 @@ public static class ImageFeatures
 
         var maskData = new byte[] { 0b1000_0000, 0b0100_0000 };
         var maskImage = HPDF_Image_LoadRaw1BitImageFromMem(pdf, maskData, 2, 2, 1, true, true);
-        var maskedImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb, 8);
+        var maskedImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb);
         HPDF_Image_SetMaskImage(maskedImage, maskImage);
         HPDF_Page_DrawImage(page, maskedImage, 160, HPDF_Page_GetHeight(page) - 120, 48, 48);
 
-        var softMask = HPDF_LoadRawImageFromMem(pdf, [255, 160, 80, 0], 2, 2, PdfColorSpace.DeviceGray, 8);
-        var softMaskedImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb, 8);
+        var softMask = HPDF_LoadRawImageFromMem(pdf, [255, 160, 80, 0], 2, 2, PdfColorSpace.DeviceGray);
+        var softMaskedImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb);
         HPDF_Image_AddSMask(softMaskedImage, softMask);
         HPDF_Page_DrawImage(page, softMaskedImage, 220, HPDF_Page_GetHeight(page) - 120, 48, 48);
 
@@ -73,8 +74,8 @@ public static class ImageFeatures
             8,
             3,
             [0, 1, 2, 0],
-            palette: [255, 0, 0, 0, 255, 0, 0, 0, 255],
-            transparency: [255, 128, 0]);
+            [255, 0, 0, 0, 255, 0, 0, 0, 255],
+            [255, 128, 0]);
         var indexedImage = HPDF_LoadPngImageFromMem(pdf, indexedPng);
         Require(HPDF_Image_GetColorSpace(indexedImage) == "Indexed", "Indexed PNG color space mismatch.");
         HPDF_Page_DrawImage(page, indexedImage, 160, HPDF_Page_GetHeight(page) - 190, 48, 48);
@@ -122,7 +123,8 @@ public static class ImageFeatures
 
         var grayJpegPath = Path.Combine(repoRoot, "demo", "images", "gray.jpg");
         var grayJpegImage = HPDF_LoadJpegImageFromFile(pdf, grayJpegPath);
-        Require(HPDF_Image_GetColorSpace(grayJpegImage) == "DeviceGray", "Grayscale JPEG fixture color space mismatch.");
+        Require(HPDF_Image_GetColorSpace(grayJpegImage) == "DeviceGray",
+            "Grayscale JPEG fixture color space mismatch.");
         HPDF_Page_DrawImage(page, grayJpegImage, 280, HPDF_Page_GetHeight(page) - 190, 48, 48);
 
         var maskFixturePath = Path.Combine(repoRoot, "demo", "pngsuite", "maskimage.png");
@@ -135,10 +137,12 @@ public static class ImageFeatures
         var pngSuiteDir = Path.Combine(repoRoot, "demo", "pngsuite");
         var suiteX = 40.0;
         var suiteY = HPDF_Page_GetHeight(page) - 260;
-        foreach (var suiteFile in Directory.GetFiles(pngSuiteDir, "basn*.png").OrderBy(static path => path, StringComparer.Ordinal))
+        foreach (var suiteFile in Directory.GetFiles(pngSuiteDir, "basn*.png")
+                     .OrderBy(static path => path, StringComparer.Ordinal))
         {
             var suiteImage = HPDF_LoadPngImageFromFile(pdf, suiteFile);
-            Require(HPDF_Image_Validate(suiteImage), $"PngSuite fixture failed validation: {Path.GetFileName(suiteFile)}.");
+            Require(HPDF_Image_Validate(suiteImage),
+                $"PngSuite fixture failed validation: {Path.GetFileName(suiteFile)}.");
             HPDF_Page_DrawImage(page, suiteImage, suiteX, suiteY, 20, 20);
             suiteX += 24;
             if (suiteX > 340)
@@ -155,11 +159,14 @@ public static class ImageFeatures
 
         var unknownCriticalPng = CreatePng(1, 1, 8, 2, [1, 2, 3], ancillaryChunks: [("VpAg", [0])]);
         var unknownCriticalError = RequireHaruException(() => HPDF_LoadPngImageFromMem(pdf, unknownCriticalPng));
-        Require(unknownCriticalError.Status == HaruStatus.InvalidPngImage, "Unknown critical PNG chunk raised the wrong status.");
+        Require(unknownCriticalError.Status == HaruStatus.InvalidPngImage,
+            "Unknown critical PNG chunk raised the wrong status.");
 
         var invalidPhysicalPixelsPng = CreatePng(1, 1, 8, 2, [1, 2, 3], ancillaryChunks: [("pHYs", [0])]);
-        var invalidPhysicalPixelsError = RequireHaruException(() => HPDF_LoadPngImageFromMem(pdf, invalidPhysicalPixelsPng));
-        Require(invalidPhysicalPixelsError.Status == HaruStatus.InvalidPngImage, "Invalid PNG pHYs chunk raised the wrong status.");
+        var invalidPhysicalPixelsError =
+            RequireHaruException(() => HPDF_LoadPngImageFromMem(pdf, invalidPhysicalPixelsPng));
+        Require(invalidPhysicalPixelsError.Status == HaruStatus.InvalidPngImage,
+            "Invalid PNG pHYs chunk raised the wrong status.");
 
         HPDF_SaveToFile(pdf, pdfPath);
 
@@ -167,7 +174,8 @@ public static class ImageFeatures
         var latin1 = Encoding.Latin1.GetString(bytes);
 
         Require(latin1.Contains("/Subtype /Image", StringComparison.Ordinal), "Missing image XObject.");
-        Require(latin1.Contains("/ColorSpace [/Indexed /DeviceRGB", StringComparison.Ordinal), "Missing Indexed color space.");
+        Require(latin1.Contains("/ColorSpace [/Indexed /DeviceRGB", StringComparison.Ordinal),
+            "Missing Indexed color space.");
         Require(latin1.Contains("/DCTDecode", StringComparison.Ordinal), "Missing JPEG DCTDecode filter.");
         Require(latin1.Contains("/CCITTFaxDecode", StringComparison.Ordinal), "Missing CCITT filter.");
         Require(latin1.Contains("/DecodeParms [", StringComparison.Ordinal), "Missing CCITT DecodeParms.");
@@ -177,7 +185,8 @@ public static class ImageFeatures
         Require(latin1.Contains("/Mask [", StringComparison.Ordinal), "Missing color-key mask.");
         Require(latin1.Contains("/XObject", StringComparison.Ordinal), "Missing page XObject resources.");
         Require(latin1.Contains("/CalRGB", StringComparison.Ordinal), "Missing CalRGB color-managed PNG color space.");
-        Require(latin1.Contains("/CalGray", StringComparison.Ordinal), "Missing CalGray color-managed PNG color space.");
+        Require(latin1.Contains("/CalGray", StringComparison.Ordinal),
+            "Missing CalGray color-managed PNG color space.");
         Require(latin1.Contains("/Gamma", StringComparison.Ordinal), "Missing PNG gamma mapping.");
         Require(latin1.Contains("/Matrix", StringComparison.Ordinal), "Missing PNG chromaticity matrix.");
         Require(latin1.Contains("/Intent /Perceptual", StringComparison.Ordinal), "Missing PNG sRGB rendering intent.");
@@ -208,7 +217,8 @@ public static class ImageFeatures
         Require(!ContainsSequence(bytes, initialPixel), "Delayed PNG retained eagerly loaded image data.");
 
         var latin1 = Encoding.Latin1.GetString(bytes);
-        Require(!latin1.Contains("_FILE_NAME", StringComparison.Ordinal), "Delayed PNG file marker leaked into PDF output.");
+        Require(!latin1.Contains("_FILE_NAME", StringComparison.Ordinal),
+            "Delayed PNG file marker leaked into PDF output.");
     }
 
     private static byte[] CreatePng(
@@ -272,10 +282,8 @@ public static class ImageFeatures
             WriteChunk(output, "tRNS", transparency);
 
         if (ancillaryChunks is not null)
-        {
             foreach (var (type, chunkData) in ancillaryChunks)
                 WriteChunk(output, type, chunkData);
-        }
 
         WriteChunk(output, "IDAT", Zlib(scanlines));
         WriteChunk(output, "IEND", ReadOnlySpan<byte>.Empty);
@@ -363,8 +371,10 @@ public static class ImageFeatures
     private static byte[] Zlib(byte[] data)
     {
         using var output = new MemoryStream();
-        using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, true))
+        {
             zlib.Write(data);
+        }
 
         return output.ToArray();
     }
@@ -409,13 +419,11 @@ public static class ImageFeatures
         {
             var found = true;
             for (var j = 0; j < needle.Length; j++)
-            {
                 if (haystack[i + j] != needle[j])
                 {
                     found = false;
                     break;
                 }
-            }
 
             if (found)
                 return true;

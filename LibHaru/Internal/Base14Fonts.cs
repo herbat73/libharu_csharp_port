@@ -10,9 +10,15 @@ internal static class Base14Fonts
 
     private static readonly HashSet<string> SupportedNames = new(Base14FontData.Names, StringComparer.Ordinal);
 
-    internal static bool IsSupported(string name) => SupportedNames.Contains(name);
+    internal static bool IsSupported(string name)
+    {
+        return SupportedNames.Contains(name);
+    }
 
-    internal static bool IsFontSpecific(string name) => IsSupported(name) && Base14FontData.Get(name).IsFontSpecific;
+    internal static bool IsFontSpecific(string name)
+    {
+        return IsSupported(name) && Base14FontData.Get(name).IsFontSpecific;
+    }
 
     internal static PdfFontProgram CreateProgram(string name)
     {
@@ -61,5 +67,8 @@ internal static class Base14Fonts
         return units * fontSize / 1000.0;
     }
 
-    private static int GlyphWidth(string fontName, char ch) => Base14FontData.WidthOfUnicode(fontName, ch);
+    private static int GlyphWidth(string fontName, char ch)
+    {
+        return Base14FontData.WidthOfUnicode(fontName, ch);
+    }
 }

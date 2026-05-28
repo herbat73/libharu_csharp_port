@@ -3,24 +3,25 @@ using System.Text;
 using LibHaru;
 using LibHaru.Internal;
 using static LibHaru.HPdf;
+using CompressionMode = LibHaru.CompressionMode;
 
 public static class CompressionFilters
 {
     public static void Test(string repoRoot, string pdfPath)
     {
         using var pdf = HPDF_New();
-        HPDF_SetCompressionMode(pdf, LibHaru.CompressionMode.All);
+        HPDF_SetCompressionMode(pdf, CompressionMode.All);
         HPDF_SetXmpMetadata(pdf, """
-            <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-            <x:xmpmeta xmlns:x='adobe:ns:meta/'>
-              <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-                <rdf:Description rdf:about='' xmlns:pdf='http://ns.adobe.com/pdf/1.3/'>
-                  <pdf:Producer>LibHaru managed compression smoke</pdf:Producer>
-                </rdf:Description>
-              </rdf:RDF>
-            </x:xmpmeta>
-            <?xpacket end='w'?>
-            """);
+                                 <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+                                 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
+                                   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+                                     <rdf:Description rdf:about='' xmlns:pdf='http://ns.adobe.com/pdf/1.3/'>
+                                       <pdf:Producer>LibHaru managed compression smoke</pdf:Producer>
+                                     </rdf:Description>
+                                   </rdf:RDF>
+                                 </x:xmpmeta>
+                                 <?xpacket end='w'?>
+                                 """);
 
         var font = HPDF_GetFont(pdf, "Helvetica");
         var page = HPDF_AddPage(pdf);
@@ -34,7 +35,7 @@ public static class CompressionFilters
             0, 0, 255,
             255, 255, 0
         };
-        var rawImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb, 8);
+        var rawImage = HPDF_LoadRawImageFromMem(pdf, rawRgb, 2, 2, PdfColorSpace.DeviceRgb);
         HPDF_Page_DrawImage(page, rawImage, 40, HPDF_Page_GetHeight(page) - 140, 48, 48);
 
         var jpegPath = Path.Combine(repoRoot, "demo", "images", "rgb.jpg");
@@ -49,10 +50,13 @@ public static class CompressionFilters
         Require(latin1.Contains("/Subtype /Image", StringComparison.Ordinal), "Missing image XObject.");
         Require(latin1.Contains("/Subtype /XML", StringComparison.Ordinal), "Missing metadata XML stream.");
         Require(latin1.Contains("/DCTDecode", StringComparison.Ordinal), "Missing JPEG DCTDecode filter.");
-        Require(Count(latin1, "/FlateDecode") >= 3, "Expected Flate filters for page content, raw image, and metadata.");
+        Require(Count(latin1, "/FlateDecode") >= 3,
+            "Expected Flate filters for page content, raw image, and metadata.");
         Require(Count(latin1, "/Filter [") >= 3, "Stream filters should be emitted as arrays.");
-        Require(!latin1.Contains("LibHaru managed compression smoke", StringComparison.Ordinal), "Metadata XML was not compressed.");
-        Require(!latin1.Contains("Compression filters smoke", StringComparison.Ordinal), "Page content was not compressed.");
+        Require(!latin1.Contains("LibHaru managed compression smoke", StringComparison.Ordinal),
+            "Metadata XML was not compressed.");
+        Require(!latin1.Contains("Compression filters smoke", StringComparison.Ordinal),
+            "Page content was not compressed.");
 
         LowLevelStreamFiltersUseArrayMetadataAndDecodeInOrder();
 
@@ -73,7 +77,8 @@ public static class CompressionFilters
         Require(
             encodedText.Contains("/Filter [/ASCII85Decode /ASCIIHexDecode /FlateDecode]", StringComparison.Ordinal),
             "Multi-filter stream did not emit filters in decode order.");
-        Require(!encodedText.Contains(Encoding.ASCII.GetString(payload), StringComparison.Ordinal), "Filtered stream leaked plaintext.");
+        Require(!encodedText.Contains(Encoding.ASCII.GetString(payload), StringComparison.Ordinal),
+            "Filtered stream leaked plaintext.");
 
         var streamBytes = ExtractStreamBytes(encodedPdf);
         var decoded = Inflate(DecodeAsciiHex(DecodeAscii85(streamBytes)));
@@ -89,8 +94,10 @@ public static class CompressionFilters
         ccittStream.SetDecodeParms(decodeParms);
 
         var ccittText = Encoding.Latin1.GetString(WriteObjectValue(ccittStream));
-        Require(ccittText.Contains("/Filter [/CCITTFaxDecode]", StringComparison.Ordinal), "CCITT filter was not emitted as an array.");
-        Require(ccittText.Contains("/DecodeParms [<<", StringComparison.Ordinal), "DecodeParms was not emitted as an array.");
+        Require(ccittText.Contains("/Filter [/CCITTFaxDecode]", StringComparison.Ordinal),
+            "CCITT filter was not emitted as an array.");
+        Require(ccittText.Contains("/DecodeParms [<<", StringComparison.Ordinal),
+            "DecodeParms was not emitted as an array.");
     }
 
     private static byte[] WriteObjectValue(PdfObject value)

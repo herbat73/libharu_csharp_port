@@ -15,7 +15,7 @@ public static class FontAndEncoder
         var type1 = HPDF_GetFont(pdf, type1Name, "WinAnsiEncoding");
 
         var ttPath = Path.Combine(repoRoot, "demo", "ttfont", "PenguinAttack.ttf");
-        var ttName = HPDF_LoadTTFontFromFile(pdf, ttPath, embedding: true);
+        var ttName = HPDF_LoadTTFontFromFile(pdf, ttPath, true);
         var tt = HPDF_GetFont(pdf, ttName, "WinAnsiEncoding");
         var ttUtf = HPDF_GetFont(pdf, ttName, "UTF-8");
         var ttVertical = HPDF_GetFont(pdf, ttName, "Identity-V");
@@ -29,10 +29,12 @@ public static class FontAndEncoder
         Require(HPDF_Font_GetUnicodeWidth(tt, 'A') > 0, "TrueType cmap/hmtx width lookup failed.");
         Require(HPDF_Font_GetAscent(tt) > 0, "TrueType hhea ascent was not parsed.");
         Require(HPDF_Font_GetEncodingName(ttUtf) == "UTF-8", "UTF encoder name was not retained.");
-        Require(HPDF_Font_GetEncodingName(ttVertical) == "Identity-V", "Vertical Identity encoder name was not retained.");
+        Require(HPDF_Font_GetEncodingName(ttVertical) == "Identity-V",
+            "Vertical Identity encoder name was not retained.");
         var verticalAdvance = (uint)Math.Max(0, (int)Math.Round(ttVertical.BBox.Top - ttVertical.BBox.Bottom));
         var verticalTextWidth = HPDF_Font_TextWidth(ttVertical, "AV");
-        Require(verticalTextWidth.NumChars == 2 && verticalTextWidth.Width == verticalAdvance * 2, "Vertical TrueType text width did not use DW2 displacement metrics.");
+        Require(verticalTextWidth.NumChars == 2 && verticalTextWidth.Width == verticalAdvance * 2,
+            "Vertical TrueType text width did not use DW2 displacement metrics.");
 
         var page = HPDF_AddPage(pdf);
         HPDF_Page_SetFontAndSize(page, type1, 18);
@@ -61,18 +63,28 @@ public static class FontAndEncoder
         Require(latin1.Contains("/BaseFont /URWGothicL-Book", StringComparison.Ordinal), "Missing Type1 BaseFont.");
         Require(latin1.Contains("/Subtype /Type1", StringComparison.Ordinal), "Missing Type1 font dictionary.");
         Require(latin1.Contains("/Subtype /TrueType", StringComparison.Ordinal), "Missing TrueType font dictionary.");
-        Require(latin1.Contains("/Subtype /Type0", StringComparison.Ordinal), "Missing Type0 composite font dictionary.");
-        Require(latin1.Contains("/Subtype /CIDFontType2", StringComparison.Ordinal), "Missing CIDFontType2 descendant font.");
-        Require(latin1.Contains("/Encoding /Identity-H", StringComparison.Ordinal), "Missing Identity-H CMap encoding.");
-        Require(latin1.Contains("/Encoding /Identity-V", StringComparison.Ordinal), "Missing Identity-V CMap encoding.");
-        Require(latin1.Contains($"/DW2 [{(int)Math.Round(ttVertical.BBox.Bottom)} {(int)Math.Round(ttVertical.BBox.Bottom - ttVertical.BBox.Top)}]", StringComparison.Ordinal), "Missing TrueType CID vertical metrics.");
+        Require(latin1.Contains("/Subtype /Type0", StringComparison.Ordinal),
+            "Missing Type0 composite font dictionary.");
+        Require(latin1.Contains("/Subtype /CIDFontType2", StringComparison.Ordinal),
+            "Missing CIDFontType2 descendant font.");
+        Require(latin1.Contains("/Encoding /Identity-H", StringComparison.Ordinal),
+            "Missing Identity-H CMap encoding.");
+        Require(latin1.Contains("/Encoding /Identity-V", StringComparison.Ordinal),
+            "Missing Identity-V CMap encoding.");
+        Require(
+            latin1.Contains(
+                $"/DW2 [{(int)Math.Round(ttVertical.BBox.Bottom)} {(int)Math.Round(ttVertical.BBox.Bottom - ttVertical.BBox.Top)}]",
+                StringComparison.Ordinal), "Missing TrueType CID vertical metrics.");
         Require(latin1.Contains("/ToUnicode", StringComparison.Ordinal), "Missing ToUnicode CMap.");
         Require(latin1.Contains("/CIDToGIDMap ", StringComparison.Ordinal), "Missing explicit CIDToGIDMap stream.");
-        Require(!latin1.Contains("/CIDToGIDMap /Identity", StringComparison.Ordinal), "Composite TrueType font should use a remapped CIDToGIDMap stream.");
-        Require(latin1.Contains("<0001> <0054>", StringComparison.Ordinal), "Missing dense-CID ToUnicode entry for Type0 text.");
+        Require(!latin1.Contains("/CIDToGIDMap /Identity", StringComparison.Ordinal),
+            "Composite TrueType font should use a remapped CIDToGIDMap stream.");
+        Require(latin1.Contains("<0001> <0054>", StringComparison.Ordinal),
+            "Missing dense-CID ToUnicode entry for Type0 text.");
         Require(latin1.Contains("/W [1 [", StringComparison.Ordinal), "Missing dense-CID width array.");
         if (supplementaryUtf is not null)
-            Require(latin1.Contains("<D83DDE00>", StringComparison.Ordinal), "Missing supplementary-plane ToUnicode mapping from cmap format 12.");
+            Require(latin1.Contains("<D83DDE00>", StringComparison.Ordinal),
+                "Missing supplementary-plane ToUnicode mapping from cmap format 12.");
         Require(latin1.Contains("/FontDescriptor", StringComparison.Ordinal), "Missing font descriptor.");
         Require(latin1.Contains("/FontFile ", StringComparison.Ordinal), "Missing Type1 FontFile stream.");
         Require(latin1.Contains("/FontFile2 ", StringComparison.Ordinal), "Missing TrueType FontFile2 stream.");
@@ -80,10 +92,13 @@ public static class FontAndEncoder
         Require(latin1.Contains("/LastChar 255", StringComparison.Ordinal), "Missing LastChar entry.");
         Require(latin1.Contains("/Widths [", StringComparison.Ordinal), "Missing Widths array.");
         Require(latin1.Contains("/Length1", StringComparison.Ordinal), "Missing font program Length1 entry.");
-        Require(!latin1.Contains($"/Length1 {ttSourceLength}", StringComparison.Ordinal), "TrueType FontFile2 embedded the full source font instead of a subset.");
+        Require(!latin1.Contains($"/Length1 {ttSourceLength}", StringComparison.Ordinal),
+            "TrueType FontFile2 embedded the full source font instead of a subset.");
         var trueTypeLength = FindFontFile2Length1(latin1);
-        Require(trueTypeLength > 0 && trueTypeLength < ttSourceLength, $"Missing shortened embedded TrueType font program length; got {trueTypeLength} from source length {ttSourceLength}.");
-        Require(Count(latin1, "/FlateDecode") >= 3, "Expected Flate filters for page content and embedded font programs.");
+        Require(trueTypeLength > 0 && trueTypeLength < ttSourceLength,
+            $"Missing shortened embedded TrueType font program length; got {trueTypeLength} from source length {ttSourceLength}.");
+        Require(Count(latin1, "/FlateDecode") >= 3,
+            "Expected Flate filters for page content and embedded font programs.");
 
         Console.WriteLine($"Generated {pdfPath}");
         Console.WriteLine($"{bytes.Length} bytes with Type1, TrueType, and Type0 CID fonts");
@@ -115,7 +130,7 @@ public static class FontAndEncoder
             if (!File.Exists(path))
                 continue;
 
-            var fontName = HPDF_LoadTTFontFromFile(pdf, path, embedding: true);
+            var fontName = HPDF_LoadTTFontFromFile(pdf, path, true);
             return HPDF_GetFont(pdf, fontName, "UTF-8");
         }
 
@@ -146,7 +161,8 @@ public static class FontAndEncoder
             if (objectEnd < 0)
                 objectEnd = value.Length;
 
-            var length1Index = value.IndexOf("/Length1", objectIndex, objectEnd - objectIndex, StringComparison.Ordinal);
+            var length1Index =
+                value.IndexOf("/Length1", objectIndex, objectEnd - objectIndex, StringComparison.Ordinal);
             if (length1Index >= 0 && TryReadInteger(value, length1Index + "/Length1".Length, out var length1, out _))
                 return length1;
 

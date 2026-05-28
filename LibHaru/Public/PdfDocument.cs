@@ -1,7 +1,9 @@
-using LibHaru.Internal;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Security;
 using System.Text;
+using LibHaru.Internal;
 
 namespace LibHaru;
 
@@ -46,45 +48,42 @@ public sealed class PdfDocument : IDisposable
         "V"
     ];
 
-    private readonly List<PdfIndirectObject> _objects = [];
-    private readonly List<PdfPage> _pages = [];
-    private readonly List<PdfImage> _images = [];
-    private readonly List<PdfIndirectObject> _fontFileObjects = [];
-    private readonly List<PdfEmbeddedFile> _embeddedFiles = [];
-    private readonly List<PdfOutputIntent> _outputIntents = [];
-    private readonly List<PdfOutline> _rootOutlines = [];
-    private readonly List<string> _pdfAXmpExtensions = [];
-    private readonly Dictionary<string, PdfFont> _fonts = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, PdfFontProgram> _fontPrograms = new(StringComparer.Ordinal);
+    private readonly PdfDictionary _catalogDictionary;
+    private readonly PdfIndirectObject _catalogObject;
     private readonly List<PdfCompositeFontBinding> _compositeFontBindings = [];
+    private readonly List<PdfEmbeddedFile> _embeddedFiles = [];
+    private readonly Dictionary<string, PdfEncoder> _encoders = new(StringComparer.Ordinal);
+    private readonly List<PdfIndirectObject> _fontFileObjects = [];
+    private readonly Dictionary<string, PdfFontProgram> _fontPrograms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PdfFont> _fonts = new(StringComparer.Ordinal);
+    private readonly List<PdfImage> _images = [];
+    private readonly PdfDictionary _infoDictionary;
+    private readonly PdfIndirectObject _infoObject;
+    private readonly Dictionary<PdfInfoType, string> _infoValues = new();
     private readonly SortedDictionary<string, PdfDestination> _namedDestinations = new(StringComparer.Ordinal);
     private readonly SortedDictionary<string, PdfJavaScript> _namedJavaScripts = new(StringComparer.Ordinal);
-    private readonly Dictionary<PdfInfoType, string> _infoValues = new();
-    private readonly Dictionary<string, PdfEncoder> _encoders = new(StringComparer.Ordinal);
-    private readonly PdfDictionary _catalogDictionary;
+
+    private readonly List<PdfIndirectObject> _objects = [];
+    private readonly List<PdfOutputIntent> _outputIntents = [];
+    private readonly List<(int PageNumber, PdfPageNumStyle Style, int FirstPage, string Prefix)> _pageLabels = [];
+    private readonly List<PdfPage> _pages = [];
     private readonly PdfDictionary _pagesDictionary;
-    private readonly PdfDictionary _infoDictionary;
-    private readonly PdfIndirectObject _catalogObject;
     private readonly PdfIndirectObject _pagesObject;
-    private readonly PdfIndirectObject _infoObject;
+    private readonly List<string> _pdfAXmpExtensions = [];
+    private readonly List<PdfOutline> _rootOutlines = [];
     private PdfEncryption? _encryption;
     private PdfIndirectObject? _encryptionObject;
-    private PdfIndirectObject? _metadataObject;
-    private PdfIndirectObject? _outlineRootObject;
-    private byte[]? _fileId;
-    private string? _metadataXml;
-    private byte[]? _lastSavedStream;
-    private int _streamPosition;
-    private string _pdfVersion = "1.4";
-    private CompressionMode _compressionMode = CompressionMode.None;
-    private PdfViewerPreference _viewerPreference = PdfViewerPreference.None;
-    private PdfPdfAType _pdfAType = PdfPdfAType.NonPdfA;
     private int _extGStateCount;
-    private int _shadingCount;
-    private int _xObjectCount;
-    private uint _pagePerPages;
+    private byte[]? _fileId;
     private bool _hasDoc = true;
-    private readonly List<(int PageNumber, PdfPageNumStyle Style, int FirstPage, string Prefix)> _pageLabels = [];
+    private byte[]? _lastSavedStream;
+    private PdfIndirectObject? _metadataObject;
+    private string? _metadataXml;
+    private PdfIndirectObject? _outlineRootObject;
+    private string _pdfVersion = "1.4";
+    private int _shadingCount;
+    private int _streamPosition;
+    private int _xObjectCount;
 
     public PdfDocument(HaruErrorHandler? errorHandler = null, object? userData = null)
     {
@@ -111,17 +110,15 @@ public sealed class PdfDocument : IDisposable
         _infoObject = AddObject(_infoDictionary);
     }
 
-    public static PdfDocument New(HaruErrorHandler? errorHandler = null, object? userData = null) => new(errorHandler, userData);
-
     public IReadOnlyList<PdfPage> Pages => _pages;
 
     public PdfPage? CurrentPage { get; private set; }
 
     public PdfEncoder? CurrentEncoder { get; private set; }
 
-    public uint PagePerPages => _pagePerPages;
+    public uint PagePerPages { get; private set; }
 
-    public CompressionMode CompressionMode => _compressionMode;
+    public CompressionMode CompressionMode { get; private set; } = CompressionMode.None;
 
     public HaruError Error { get; }
 
@@ -131,17 +128,39 @@ public sealed class PdfDocument : IDisposable
 
     public bool IsEncrypted => _encryption is not null;
 
-    public PdfViewerPreference ViewerPreference => _viewerPreference;
+    public PdfViewerPreference ViewerPreference { get; private set; } = PdfViewerPreference.None;
 
-    public PdfPdfAType PdfAType => _pdfAType;
+    public PdfPdfAType PdfAType { get; private set; } = PdfPdfAType.NonPdfA;
 
-    public uint GetError() => Error.ErrorNo;
+    public void Dispose()
+    {
+        _lastSavedStream = null;
+    }
 
-    public uint GetErrorDetail() => Error.DetailNo;
+    public static PdfDocument New(HaruErrorHandler? errorHandler = null, object? userData = null)
+    {
+        return new PdfDocument(errorHandler, userData);
+    }
 
-    public uint CheckError() => Error.CheckError();
+    public uint GetError()
+    {
+        return Error.ErrorNo;
+    }
 
-    public void ResetError() => Error.Reset();
+    public uint GetErrorDetail()
+    {
+        return Error.DetailNo;
+    }
+
+    public uint CheckError()
+    {
+        return Error.CheckError();
+    }
+
+    public void ResetError()
+    {
+        Error.Reset();
+    }
 
     public bool HasDoc()
     {
@@ -154,11 +173,20 @@ public sealed class PdfDocument : IDisposable
         return true;
     }
 
-    public void NewDoc() => ResetDocumentState(resetCompression: false, hasDoc: true);
+    public void NewDoc()
+    {
+        ResetDocumentState(false, true);
+    }
 
-    public void FreeDoc() => ResetDocumentState(resetCompression: false, hasDoc: false);
+    public void FreeDoc()
+    {
+        ResetDocumentState(false, false);
+    }
 
-    public void FreeDocAll() => ResetDocumentState(resetCompression: true, hasDoc: false);
+    public void FreeDocAll()
+    {
+        ResetDocumentState(true, false);
+    }
 
     public void SetPagesConfiguration(uint pagePerPages)
     {
@@ -170,11 +198,13 @@ public sealed class PdfDocument : IDisposable
         if (pagePerPages > PdfObjectLimits.MaxArrayItems)
             Throw(HaruStatus.InvalidParameter, "Pages configuration exceeds the maximum array size.");
 
-        _pagePerPages = pagePerPages;
+        PagePerPages = pagePerPages;
     }
 
-    public void SetErrorHandler(HaruErrorHandler? errorHandler, object? userData = null) =>
+    public void SetErrorHandler(HaruErrorHandler? errorHandler, object? userData = null)
+    {
         Error.SetHandler(errorHandler, userData);
+    }
 
     public PdfPage AddPage()
     {
@@ -297,7 +327,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw Propagate(ex);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -317,7 +348,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -344,7 +376,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw Propagate(ex);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -369,7 +402,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw Propagate(ex);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -398,7 +432,7 @@ public sealed class PdfDocument : IDisposable
         if ((mode & ~CompressionMode.All) != 0)
             Throw(HaruStatus.InvalidCompressionMode, "Compression mode contains unsupported flags.");
 
-        _compressionMode = mode;
+        CompressionMode = mode;
     }
 
     public void SetPageLayout(PdfPageLayout layout)
@@ -420,16 +454,14 @@ public sealed class PdfDocument : IDisposable
     public void SetViewerPreference(PdfViewerPreference preference)
     {
         if ((preference & ~(PdfViewerPreference.HideToolbar
-            | PdfViewerPreference.HideMenubar
-            | PdfViewerPreference.HideWindowUI
-            | PdfViewerPreference.FitWindow
-            | PdfViewerPreference.CenterWindow
-            | PdfViewerPreference.PrintScalingNone)) != 0)
-        {
+                            | PdfViewerPreference.HideMenubar
+                            | PdfViewerPreference.HideWindowUI
+                            | PdfViewerPreference.FitWindow
+                            | PdfViewerPreference.CenterWindow
+                            | PdfViewerPreference.PrintScalingNone)) != 0)
             Throw(HaruStatus.InvalidParameter, "Viewer preference contains unsupported flags.");
-        }
 
-        _viewerPreference = preference;
+        ViewerPreference = preference;
     }
 
     public void SetOpenAction(PdfDestination? destination)
@@ -516,7 +548,7 @@ public sealed class PdfDocument : IDisposable
         var stream = new PdfStreamObject(Encoding.UTF8.GetBytes(code))
         {
             Kind = PdfStreamKind.JavaScript,
-            CompressionMode = _compressionMode,
+            CompressionMode = CompressionMode,
             Subclass = PdfObjectClass.JavaScript
         };
         var obj = AddObject(stream);
@@ -536,7 +568,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -566,7 +599,7 @@ public sealed class PdfDocument : IDisposable
             var stream = new PdfStreamObject(data)
             {
                 Kind = PdfStreamKind.EmbeddedFile,
-                CompressionMode = _compressionMode,
+                CompressionMode = CompressionMode,
                 Subclass = PdfObjectClass.EmbeddedFile
             };
             stream.Dictionary.SetName("Type", "EmbeddedFile");
@@ -591,7 +624,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -606,10 +640,12 @@ public sealed class PdfDocument : IDisposable
         return new PdfExtGState(this, $"E{++_extGStateCount}", obj);
     }
 
-    public PdfShading CreateShading(PdfShadingType type, PdfColorSpace colorSpace, double xMin, double xMax, double yMin, double yMax)
+    public PdfShading CreateShading(PdfShadingType type, PdfColorSpace colorSpace, double xMin, double xMax,
+        double yMin, double yMax)
     {
         if (type != PdfShadingType.FreeFormTriangleMesh)
-            Throw(HaruStatus.InvalidShadingType, "Use the typed axial/radial shading helpers for non-mesh shading types.");
+            Throw(HaruStatus.InvalidShadingType,
+                "Use the typed axial/radial shading helpers for non-mesh shading types.");
 
         if (colorSpace != PdfColorSpace.DeviceRgb)
             Throw(HaruStatus.InvalidColorSpace, "Only DeviceRGB shadings are implemented.");
@@ -620,7 +656,7 @@ public sealed class PdfDocument : IDisposable
         var stream = new PdfStreamObject([])
         {
             Kind = PdfStreamKind.Shading,
-            CompressionMode = _compressionMode,
+            CompressionMode = CompressionMode,
             Subclass = PdfObjectClass.Shading
         };
         stream.Dictionary.Set("ShadingType", new PdfInteger((int)type));
@@ -640,7 +676,8 @@ public sealed class PdfDocument : IDisposable
         return new PdfShading(this, $"Sh{_shadingCount++}", obj, type, xMin, xMax, yMin, yMax);
     }
 
-    public PdfShading CreateAxialShading(PdfPoint startPoint, PdfPoint endPoint, PdfRgbColor startColor, PdfRgbColor endColor, bool extendStart = false, bool extendEnd = false)
+    public PdfShading CreateAxialShading(PdfPoint startPoint, PdfPoint endPoint, PdfRgbColor startColor,
+        PdfRgbColor endColor, bool extendStart = false, bool extendEnd = false)
     {
         ValidatePoint(startPoint, "Axial shading start point");
         ValidatePoint(endPoint, "Axial shading end point");
@@ -661,7 +698,9 @@ public sealed class PdfDocument : IDisposable
         return new PdfShading(this, $"Sh{_shadingCount++}", obj, PdfShadingType.Axial);
     }
 
-    public PdfShading CreateRadialShading(PdfPoint startCenter, double startRadius, PdfPoint endCenter, double endRadius, PdfRgbColor startColor, PdfRgbColor endColor, bool extendStart = false, bool extendEnd = false)
+    public PdfShading CreateRadialShading(PdfPoint startCenter, double startRadius, PdfPoint endCenter,
+        double endRadius, PdfRgbColor startColor, PdfRgbColor endColor, bool extendStart = false,
+        bool extendEnd = false)
     {
         ValidatePoint(startCenter, "Radial shading start center");
         ValidatePoint(endCenter, "Radial shading end center");
@@ -697,7 +736,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -713,7 +753,7 @@ public sealed class PdfDocument : IDisposable
         var stream = new PdfStreamObject(data)
         {
             Kind = PdfStreamKind.U3D,
-            CompressionMode = _compressionMode,
+            CompressionMode = CompressionMode,
             Subclass = PdfObjectClass.U3D
         };
         stream.Dictionary.SetName("Type", "3D");
@@ -781,7 +821,8 @@ public sealed class PdfDocument : IDisposable
         return AppendOutputIntent(outputConditionIdentifier, LoadIccProfileFromMem(iccProfile, 3), info);
     }
 
-    public PdfOutputIntent AppendOutputIntent(string outputConditionIdentifier, PdfIccProfile iccProfile, string? info = null)
+    public PdfOutputIntent AppendOutputIntent(string outputConditionIdentifier, PdfIccProfile iccProfile,
+        string? info = null)
     {
         EnsureHasDoc();
 
@@ -820,7 +861,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -839,13 +881,14 @@ public sealed class PdfDocument : IDisposable
             1 => "DeviceGray",
             3 => "DeviceRGB",
             4 => "DeviceCMYK",
-            _ => throw CreateException(HaruStatus.InvalidIccComponentNum, "ICC profile component count must be 1, 3, or 4.")
+            _ => throw CreateException(HaruStatus.InvalidIccComponentNum,
+                "ICC profile component count must be 1, 3, or 4.")
         };
 
         var profileStream = new PdfStreamObject(iccProfile.ToArray())
         {
             Kind = PdfStreamKind.IccProfile,
-            CompressionMode = _compressionMode,
+            CompressionMode = CompressionMode,
             Subclass = PdfObjectClass.IccProfile
         };
         profileStream.Dictionary.Set("N", new PdfInteger(componentCount));
@@ -894,7 +937,7 @@ public sealed class PdfDocument : IDisposable
         if (!Enum.IsDefined(pdfAType))
             Throw(HaruStatus.InvalidParameter, "PDF/A type is out of range.");
 
-        _pdfAType = pdfAType;
+        PdfAType = pdfAType;
 
         if (pdfAType != PdfPdfAType.NonPdfA && _metadataObject is null)
             SetXmpMetadata(CreatePdfAXmp(pdfAType));
@@ -907,16 +950,16 @@ public sealed class PdfDocument : IDisposable
 
         _pdfAXmpExtensions.Add(xmpExtension);
 
-        if (_pdfAType != PdfPdfAType.NonPdfA)
-            SetXmpMetadata(CreatePdfAXmp(_pdfAType));
+        if (PdfAType != PdfPdfAType.NonPdfA)
+            SetXmpMetadata(CreatePdfAXmp(PdfAType));
     }
 
     public void ClearPdfAXmpExtensions()
     {
         _pdfAXmpExtensions.Clear();
 
-        if (_pdfAType != PdfPdfAType.NonPdfA)
-            SetXmpMetadata(CreatePdfAXmp(_pdfAType));
+        if (PdfAType != PdfPdfAType.NonPdfA)
+            SetXmpMetadata(CreatePdfAXmp(PdfAType));
     }
 
     public void SetInfoAttr(PdfInfoType type, string value)
@@ -962,7 +1005,7 @@ public sealed class PdfDocument : IDisposable
         var stream = new PdfStreamObject(Encoding.UTF8.GetBytes(xml))
         {
             Kind = PdfStreamKind.Metadata,
-            CompressionMode = _compressionMode
+            CompressionMode = CompressionMode
         };
         stream.Dictionary.SetName("Type", "Metadata");
         stream.Dictionary.SetName("Subtype", "XML");
@@ -978,7 +1021,8 @@ public sealed class PdfDocument : IDisposable
         }
     }
 
-    public PdfImage LoadRawImageFromMem(byte[] data, int width, int height, PdfColorSpace colorSpace, int bitsPerComponent = 8)
+    public PdfImage LoadRawImageFromMem(byte[] data, int width, int height, PdfColorSpace colorSpace,
+        int bitsPerComponent = 8)
     {
         if (data is null)
             Throw(HaruStatus.InvalidImage, "Image data cannot be null.");
@@ -995,7 +1039,7 @@ public sealed class PdfDocument : IDisposable
             Throw(HaruStatus.InvalidImage, $"Raw image data length was {data.Length}; expected {expectedSize} bytes.");
 
         if (colorSpace == PdfColorSpace.DeviceGray && bitsPerComponent == 1)
-            return LoadRaw1BitImageFromMem(data, width, height, (width + 7) / 8, blackIs1: true, topIsFirst: true);
+            return LoadRaw1BitImageFromMem(data, width, height, (width + 7) / 8, true, true);
 
         var stream = CreateImageStream(data, width, height, colorSpace, bitsPerComponent);
         return RegisterImage(stream, width, height, bitsPerComponent, colorSpace);
@@ -1008,20 +1052,22 @@ public sealed class PdfDocument : IDisposable
 
         try
         {
-            return LoadRawImageFromMem(File.ReadAllBytes(fileName), width, height, colorSpace, 8);
+            return LoadRawImageFromMem(File.ReadAllBytes(fileName), width, height, colorSpace);
         }
         catch (HaruException)
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
         }
     }
 
-    public PdfImage LoadRaw1BitImageFromMem(byte[] data, int width, int height, int lineWidth, bool blackIs1, bool topIsFirst)
+    public PdfImage LoadRaw1BitImageFromMem(byte[] data, int width, int height, int lineWidth, bool blackIs1,
+        bool topIsFirst)
     {
         if (data is null)
             Throw(HaruStatus.InvalidImage, "Image data cannot be null.");
@@ -1034,7 +1080,8 @@ public sealed class PdfDocument : IDisposable
 
         var expectedSize = CheckedImageByteCount(lineWidth, height, 1, 8);
         if (data.Length < expectedSize)
-            Throw(HaruStatus.InvalidImage, $"Raw 1-bit image data length was {data.Length}; expected at least {expectedSize} bytes.");
+            Throw(HaruStatus.InvalidImage,
+                $"Raw 1-bit image data length was {data.Length}; expected at least {expectedSize} bytes.");
 
         var rows = new byte[CheckedImageByteCount(stride, height, 1, 8)];
 
@@ -1047,7 +1094,7 @@ public sealed class PdfDocument : IDisposable
         var streamData = rows;
         var stream = CreateImageStream(streamData, width, height, PdfColorSpace.DeviceGray, 1);
 
-        if (_compressionMode.HasFlag(CompressionMode.Image))
+        if (CompressionMode.HasFlag(CompressionMode.Image))
         {
             stream.SetData(CcittFaxEncoder.EncodeGroup4(rows, width, height, stride));
             stream.Filter = PdfStreamFilter.CcittDecode;
@@ -1077,7 +1124,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -1104,7 +1152,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or ArgumentException or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -1120,7 +1169,8 @@ public sealed class PdfDocument : IDisposable
         return RegisterPngImage(png);
     }
 
-    private PdfImage RegisterPngImage(PngImageData png, Func<byte[]>? delayedDataProvider = null, string? delayedFileName = null)
+    private PdfImage RegisterPngImage(PngImageData png, Func<byte[]>? delayedDataProvider = null,
+        string? delayedFileName = null)
     {
         var colorSpaceObject = CreatePngColorSpaceObject(png);
         var stream = CreateImageStream(
@@ -1147,7 +1197,8 @@ public sealed class PdfDocument : IDisposable
 
         if (png.SoftMaskData is not null)
         {
-            var softMaskStream = CreateImageStream(png.SoftMaskData, png.Width, png.Height, PdfColorSpace.DeviceGray, 8);
+            var softMaskStream =
+                CreateImageStream(png.SoftMaskData, png.Width, png.Height, PdfColorSpace.DeviceGray, 8);
             var softMaskObject = AddObject(softMaskStream);
             stream.Dictionary.Set("SMask", softMaskObject.Reference);
         }
@@ -1167,7 +1218,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or ArgumentException or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -1185,9 +1237,7 @@ public sealed class PdfDocument : IDisposable
             || !SameSequence(actual.ColorMask, expected.ColorMask)
             || !SameSequence(actual.IndexedPalette, expected.IndexedPalette)
             || !SamePngColorManagement(actual.ColorManagement, expected.ColorManagement))
-        {
             Throw(HaruStatus.InvalidPngImage, "Delayed PNG file changed to an incompatible image format before write.");
-        }
     }
 
     private static bool SamePngColorManagement(PngColorManagementData? left, PngColorManagementData? right)
@@ -1199,9 +1249,9 @@ public sealed class PdfDocument : IDisposable
             return false;
 
         return left.Gamma == right.Gamma
-            && left.Chromaticities == right.Chromaticities
-            && string.Equals(left.RenderingIntent, right.RenderingIntent, StringComparison.Ordinal)
-            && SameSequence(left.IccProfile, right.IccProfile);
+               && left.Chromaticities == right.Chromaticities
+               && string.Equals(left.RenderingIntent, right.RenderingIntent, StringComparison.Ordinal)
+               && SameSequence(left.IccProfile, right.IccProfile);
     }
 
     private static bool SameSequence<T>(IReadOnlyList<T>? left, IReadOnlyList<T>? right)
@@ -1213,10 +1263,8 @@ public sealed class PdfDocument : IDisposable
             return false;
 
         for (var i = 0; i < left.Count; i++)
-        {
             if (!EqualityComparer<T>.Default.Equals(left[i], right[i]))
                 return false;
-        }
 
         return true;
     }
@@ -1234,7 +1282,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
             throw;
@@ -1251,14 +1300,12 @@ public sealed class PdfDocument : IDisposable
         stream.Filter = PdfStreamFilter.DctDecode;
 
         if (header.ColorSpace == PdfColorSpace.DeviceCmyk)
-        {
             stream.Dictionary.Set("Decode", new PdfArray([
                 new PdfInteger(1), new PdfInteger(0),
                 new PdfInteger(1), new PdfInteger(0),
                 new PdfInteger(1), new PdfInteger(0),
                 new PdfInteger(1), new PdfInteger(0)
             ]));
-        }
 
         return RegisterImage(stream, header.Width, header.Height, header.BitsPerComponent, header.ColorSpace);
     }
@@ -1278,14 +1325,18 @@ public sealed class PdfDocument : IDisposable
         }
     }
 
-    public void SetPermission(Permission permission) => SetPermission((uint)permission);
+    public void SetPermission(Permission permission)
+    {
+        SetPermission((uint)permission);
+    }
 
     public void SetPermission(uint permission)
     {
         var encryption = _encryption;
         if (encryption is null)
         {
-            Throw(HaruStatus.DocEncryptDictNotFound, "Encryption dictionary has not been created. Call SetPassword first.");
+            Throw(HaruStatus.DocEncryptDictNotFound,
+                "Encryption dictionary has not been created. Call SetPassword first.");
             return;
         }
 
@@ -1297,7 +1348,8 @@ public sealed class PdfDocument : IDisposable
         var encryption = _encryption;
         if (encryption is null)
         {
-            Throw(HaruStatus.DocEncryptDictNotFound, "Encryption dictionary has not been created. Call SetPassword first.");
+            Throw(HaruStatus.DocEncryptDictNotFound,
+                "Encryption dictionary has not been created. Call SetPassword first.");
             return;
         }
 
@@ -1387,7 +1439,10 @@ public sealed class PdfDocument : IDisposable
         return _lastSavedStream.ToArray();
     }
 
-    public uint GetStreamSize() => (uint)(_lastSavedStream?.Length ?? 0);
+    public uint GetStreamSize()
+    {
+        return (uint)(_lastSavedStream?.Length ?? 0);
+    }
 
     public byte[] ReadFromStream(uint size)
     {
@@ -1434,7 +1489,8 @@ public sealed class PdfDocument : IDisposable
         {
             throw;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                       or SecurityException)
         {
             Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
         }
@@ -1466,11 +1522,6 @@ public sealed class PdfDocument : IDisposable
         {
             throw Propagate(ex);
         }
-    }
-
-    public void Dispose()
-    {
-        _lastSavedStream = null;
     }
 
     internal PdfIndirectObject AddObject(PdfObject value)
@@ -1516,19 +1567,19 @@ public sealed class PdfDocument : IDisposable
         _lastSavedStream = null;
         _streamPosition = 0;
         _pdfVersion = "1.4";
-        _viewerPreference = PdfViewerPreference.None;
-        _pdfAType = PdfPdfAType.NonPdfA;
+        ViewerPreference = PdfViewerPreference.None;
+        PdfAType = PdfPdfAType.NonPdfA;
         _extGStateCount = 0;
         _shadingCount = 0;
         _xObjectCount = 0;
-        _pagePerPages = 0;
+        PagePerPages = 0;
         CurrentPage = null;
         CurrentEncoder = null;
         PageLayout = PdfPageLayout.Single;
         PageMode = PdfPageMode.UseNone;
 
         if (resetCompression)
-            _compressionMode = CompressionMode.None;
+            CompressionMode = CompressionMode.None;
 
         _pagesDictionary.Clear();
         _catalogDictionary.Clear();
@@ -1581,7 +1632,10 @@ public sealed class PdfDocument : IDisposable
         return _outlineRootObject;
     }
 
-    private List<PdfOutline> RootOutlines(PdfIndirectObject _) => _rootOutlines;
+    private List<PdfOutline> RootOutlines(PdfIndirectObject _)
+    {
+        return _rootOutlines;
+    }
 
     private PdfFontProgram ResolveFontProgram(string fontName)
     {
@@ -1606,7 +1660,8 @@ public sealed class PdfDocument : IDisposable
         _fontPrograms.Add(program.BaseFont, program);
     }
 
-    private PdfDictionary CreateFontDictionary(PdfFontProgram program, PdfEncoding encoding, out PdfCompositeFontObjects? compositeObjects)
+    private PdfDictionary CreateFontDictionary(PdfFontProgram program, PdfEncoding encoding,
+        out PdfCompositeFontObjects? compositeObjects)
     {
         compositeObjects = null;
         if (encoding.IsComposite)
@@ -1635,7 +1690,8 @@ public sealed class PdfDocument : IDisposable
         return dictionary;
     }
 
-    private PdfDictionary CreateCompositeFontDictionary(PdfFontProgram program, PdfEncoding encoding, out PdfCompositeFontObjects? compositeObjects)
+    private PdfDictionary CreateCompositeFontDictionary(PdfFontProgram program, PdfEncoding encoding,
+        out PdfCompositeFontObjects? compositeObjects)
     {
         compositeObjects = null;
         if (program.Kind == PdfFontProgramKind.CidType0)
@@ -1660,7 +1716,10 @@ public sealed class PdfDocument : IDisposable
         if (program.Descriptor.MissingWidth != 0)
             descendant.Set("DW", new PdfInteger(program.Descriptor.MissingWidth));
 
-        descendant.Set("DW2", new PdfArray([new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)]));
+        descendant.Set("DW2",
+            new PdfArray([
+                new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)
+            ]));
         descendant.Set("W", new PdfArray());
         var descendantObject = AddObject(descendant);
         var toUnicodeStream = new PdfStreamObject([]);
@@ -1677,7 +1736,8 @@ public sealed class PdfDocument : IDisposable
         return dictionary;
     }
 
-    private PdfDictionary CreateOpenTypeCffCidFontDictionary(PdfFontProgram program, PdfEncoding encoding, out PdfCompositeFontObjects compositeObjects)
+    private PdfDictionary CreateOpenTypeCffCidFontDictionary(PdfFontProgram program, PdfEncoding encoding,
+        out PdfCompositeFontObjects compositeObjects)
     {
         var descendant = new PdfDictionary { Subclass = PdfObjectClass.Font };
         descendant.SetName("Type", "Font");
@@ -1689,7 +1749,10 @@ public sealed class PdfDocument : IDisposable
         if (program.Descriptor.MissingWidth != 0)
             descendant.Set("DW", new PdfInteger(program.Descriptor.MissingWidth));
 
-        descendant.Set("DW2", new PdfArray([new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)]));
+        descendant.Set("DW2",
+            new PdfArray([
+                new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)
+            ]));
         descendant.Set("W", new PdfArray());
         var descendantObject = AddObject(descendant);
         var toUnicodeStream = new PdfStreamObject([]);
@@ -1718,7 +1781,10 @@ public sealed class PdfDocument : IDisposable
         descendant.Set("CIDSystemInfo", CreateCidSystemInfo(program.CidOrdering ?? "Identity", program.CidSupplement));
         descendant.Set("FontDescriptor", CreateFontDescriptor(program).Reference);
         descendant.Set("DW", new PdfInteger(program.CidDefaultWidth));
-        descendant.Set("DW2", new PdfArray([new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)]));
+        descendant.Set("DW2",
+            new PdfArray([
+                new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)
+            ]));
         descendant.Set("W", BuildPredefinedCidWidthsArray(program));
         var descendantObject = AddObject(descendant);
 
@@ -1862,20 +1928,20 @@ public sealed class PdfDocument : IDisposable
     private static string FormatCompositeCode(PdfCompositeCharCode code)
     {
         return code.ByteLength == 1
-            ? (code.Code & 0xFF).ToString("X2", System.Globalization.CultureInfo.InvariantCulture)
-            : (code.Code & 0xFFFF).ToString("X4", System.Globalization.CultureInfo.InvariantCulture);
+            ? (code.Code & 0xFF).ToString("X2", CultureInfo.InvariantCulture)
+            : (code.Code & 0xFFFF).ToString("X4", CultureInfo.InvariantCulture);
     }
 
     private static string FormatUnicodeScalar(int unicode)
     {
         if (unicode <= 0xFFFF)
-            return unicode.ToString("X4", System.Globalization.CultureInfo.InvariantCulture);
+            return unicode.ToString("X4", CultureInfo.InvariantCulture);
 
         var scalar = unicode - 0x10000;
         var high = 0xD800 + (scalar >> 10);
         var low = 0xDC00 + (scalar & 0x3FF);
-        return high.ToString("X4", System.Globalization.CultureInfo.InvariantCulture)
-            + low.ToString("X4", System.Globalization.CultureInfo.InvariantCulture);
+        return high.ToString("X4", CultureInfo.InvariantCulture)
+               + low.ToString("X4", CultureInfo.InvariantCulture);
     }
 
     private PdfIndirectObject CreateFontDescriptor(PdfFontProgram program)
@@ -1916,7 +1982,7 @@ public sealed class PdfDocument : IDisposable
             var fontFileStream = new PdfStreamObject(program.FontFile.Data)
             {
                 Kind = PdfStreamKind.Font,
-                CompressionMode = _compressionMode
+                CompressionMode = CompressionMode
             };
 
             if (program.FontFile.Subtype is not null)
@@ -1960,19 +2026,15 @@ public sealed class PdfDocument : IDisposable
         PrepareFontFiles();
 
         foreach (var image in _images)
-        {
             if (image.ImageObject.Value is PdfStreamObject imageStream)
-                imageStream.CompressionMode = _compressionMode;
-        }
+                imageStream.CompressionMode = CompressionMode;
 
         foreach (var fontFile in _fontFileObjects)
-        {
             if (fontFile.Value is PdfStreamObject fontFileStream)
-                fontFileStream.CompressionMode = _compressionMode;
-        }
+                fontFileStream.CompressionMode = CompressionMode;
 
         if (_metadataObject?.Value is PdfStreamObject metadataStream)
-            metadataStream.CompressionMode = _compressionMode;
+            metadataStream.CompressionMode = CompressionMode;
     }
 
     private void PrepareFontFiles()
@@ -2012,24 +2074,24 @@ public sealed class PdfDocument : IDisposable
 
     private void PrepareViewerPreferences()
     {
-        if (_viewerPreference == PdfViewerPreference.None)
+        if (ViewerPreference == PdfViewerPreference.None)
         {
             _catalogDictionary.Remove("ViewerPreferences");
             return;
         }
 
         var preferences = new PdfDictionary();
-        if (_viewerPreference.HasFlag(PdfViewerPreference.HideToolbar))
+        if (ViewerPreference.HasFlag(PdfViewerPreference.HideToolbar))
             preferences.Set("HideToolbar", new PdfBoolean(true));
-        if (_viewerPreference.HasFlag(PdfViewerPreference.HideMenubar))
+        if (ViewerPreference.HasFlag(PdfViewerPreference.HideMenubar))
             preferences.Set("HideMenubar", new PdfBoolean(true));
-        if (_viewerPreference.HasFlag(PdfViewerPreference.HideWindowUI))
+        if (ViewerPreference.HasFlag(PdfViewerPreference.HideWindowUI))
             preferences.Set("HideWindowUI", new PdfBoolean(true));
-        if (_viewerPreference.HasFlag(PdfViewerPreference.FitWindow))
+        if (ViewerPreference.HasFlag(PdfViewerPreference.FitWindow))
             preferences.Set("FitWindow", new PdfBoolean(true));
-        if (_viewerPreference.HasFlag(PdfViewerPreference.CenterWindow))
+        if (ViewerPreference.HasFlag(PdfViewerPreference.CenterWindow))
             preferences.Set("CenterWindow", new PdfBoolean(true));
-        if (_viewerPreference.HasFlag(PdfViewerPreference.PrintScalingNone))
+        if (ViewerPreference.HasFlag(PdfViewerPreference.PrintScalingNone))
             preferences.SetName("PrintScaling", "None");
 
         _catalogDictionary.Set("ViewerPreferences", preferences);
@@ -2169,7 +2231,8 @@ public sealed class PdfDocument : IDisposable
         {
             var leafEntries = sorted.Skip(offset).Take(leafSize).ToArray();
             var leaf = new PdfDictionary { Subclass = PdfObjectClass.NameTree };
-            leaf.Set("Limits", new PdfArray([PdfString.FromText(leafEntries[0].Key), PdfString.FromText(leafEntries[^1].Key)]));
+            leaf.Set("Limits",
+                new PdfArray([PdfString.FromText(leafEntries[0].Key), PdfString.FromText(leafEntries[^1].Key)]));
             leaf.Set("Names", BuildNameTreeLeafNames(leafEntries));
             kids.Add(AddObject(leaf).Reference);
         }
@@ -2215,12 +2278,13 @@ public sealed class PdfDocument : IDisposable
         foreach (var outputIntent in _outputIntents)
             outputIntent.ValidateOrThrow();
 
-        _catalogDictionary.Set("OutputIntents", new PdfArray(_outputIntents.Select(static intent => intent.IntentObject.Reference)));
+        _catalogDictionary.Set("OutputIntents",
+            new PdfArray(_outputIntents.Select(static intent => intent.IntentObject.Reference)));
     }
 
     private void PreparePdfA()
     {
-        if (_pdfAType == PdfPdfAType.NonPdfA)
+        if (PdfAType == PdfPdfAType.NonPdfA)
             return;
 
         if (_encryption is not null)
@@ -2232,25 +2296,21 @@ public sealed class PdfDocument : IDisposable
         ValidatePdfAOutputIntents();
         ValidatePdfAActionAndMediaRestrictions();
 
-        if (_embeddedFiles.Count > 0 && !PdfAAllowsAssociatedFiles(_pdfAType))
-            Throw(HaruStatus.InvalidDocumentState, "Embedded files require PDF/A-3, PDF/A-4F, or PDF/A-4E conformance.");
+        if (_embeddedFiles.Count > 0 && !PdfAAllowsAssociatedFiles(PdfAType))
+            Throw(HaruStatus.InvalidDocumentState,
+                "Embedded files require PDF/A-3, PDF/A-4F, or PDF/A-4E conformance.");
 
         foreach (var embeddedFile in _embeddedFiles)
-        {
             if (!embeddedFile.HasAFRelationship)
                 embeddedFile.SetAFRelationship(PdfAFRelationship.Unspecified);
-        }
 
-        if (_metadataObject is null || _metadataXml is null || !_metadataXml.Contains("pdfaid:part", StringComparison.Ordinal))
-        {
-            SetXmpMetadata(CreatePdfAXmp(_pdfAType));
-        }
+        if (_metadataObject is null || _metadataXml is null ||
+            !_metadataXml.Contains("pdfaid:part", StringComparison.Ordinal))
+            SetXmpMetadata(CreatePdfAXmp(PdfAType));
         else
-        {
-            ValidatePdfAXmpIdentification(_metadataXml, _pdfAType);
-        }
+            ValidatePdfAXmpIdentification(_metadataXml, PdfAType);
 
-        EnsurePdfVersion(MinPdfVersionForPdfA(_pdfAType));
+        EnsurePdfVersion(MinPdfVersionForPdfA(PdfAType));
 
         var markInfo = new PdfDictionary();
         markInfo.Set("Marked", new PdfBoolean(true));
@@ -2267,12 +2327,14 @@ public sealed class PdfDocument : IDisposable
         _fileId ??= PdfEncryption.CreateFileId(_infoValues, _objects.Count, Error);
     }
 
-    private static bool PdfAAllowsAssociatedFiles(PdfPdfAType type) =>
-        type is PdfPdfAType.PdfA3A
+    private static bool PdfAAllowsAssociatedFiles(PdfPdfAType type)
+    {
+        return type is PdfPdfAType.PdfA3A
             or PdfPdfAType.PdfA3B
             or PdfPdfAType.PdfA3U
             or PdfPdfAType.PdfA4E
             or PdfPdfAType.PdfA4F;
+    }
 
     private void ValidatePdfAActionAndMediaRestrictions()
     {
@@ -2298,11 +2360,11 @@ public sealed class PdfDocument : IDisposable
         var type = dictionary.Get<PdfName>("Type");
         var subtype = dictionary.Get<PdfName>("Subtype");
 
-        if (type?.Value == "Annot" && subtype is not null && PdfAProhibitsAnnotationSubtype(subtype.Value, _pdfAType))
+        if (type?.Value == "Annot" && subtype is not null && PdfAProhibitsAnnotationSubtype(subtype.Value, PdfAType))
             Throw(HaruStatus.InvalidDocumentState, $"PDF/A documents cannot contain {subtype.Value} annotations.");
 
-        ValidatePdfAActionObject(dictionary.GetItem("A", PdfObjectClass.Any), allowActionArray: false);
-        ValidatePdfAActionObject(dictionary.GetItem("OpenAction", PdfObjectClass.Any), allowActionArray: false);
+        ValidatePdfAActionObject(dictionary.GetItem("A", PdfObjectClass.Any), false);
+        ValidatePdfAActionObject(dictionary.GetItem("OpenAction", PdfObjectClass.Any), false);
 
         if (dictionary.GetItem("AA", PdfObjectClass.Any) is PdfDictionary additionalActions)
             ValidatePdfAAdditionalActions(additionalActions);
@@ -2311,7 +2373,7 @@ public sealed class PdfDocument : IDisposable
     private void ValidatePdfAAdditionalActions(PdfDictionary additionalActions)
     {
         foreach (var key in PdfAdditionalActionKeys)
-            ValidatePdfAActionObject(additionalActions.GetItem(key, PdfObjectClass.Any), allowActionArray: false);
+            ValidatePdfAActionObject(additionalActions.GetItem(key, PdfObjectClass.Any), false);
     }
 
     private void ValidatePdfAActionObject(PdfObject? action, bool allowActionArray)
@@ -2322,14 +2384,15 @@ public sealed class PdfDocument : IDisposable
                 return;
             case PdfArray actions when allowActionArray:
                 for (var i = 0; i < actions.Count; i++)
-                    ValidatePdfAActionObject(actions.GetItem(i, PdfObjectClass.Any), allowActionArray: false);
+                    ValidatePdfAActionObject(actions.GetItem(i, PdfObjectClass.Any), false);
                 return;
             case PdfDictionary dictionary:
                 var actionType = dictionary.Get<PdfName>("S");
                 if (actionType is not null && PdfAProhibitedActionTypes.Contains(actionType.Value))
-                    Throw(HaruStatus.InvalidDocumentState, $"PDF/A documents cannot contain {actionType.Value} actions.");
+                    Throw(HaruStatus.InvalidDocumentState,
+                        $"PDF/A documents cannot contain {actionType.Value} actions.");
 
-                ValidatePdfAActionObject(dictionary.GetItem("Next", PdfObjectClass.Any), allowActionArray: true);
+                ValidatePdfAActionObject(dictionary.GetItem("Next", PdfObjectClass.Any), true);
                 return;
         }
     }
@@ -2357,18 +2420,21 @@ public sealed class PdfDocument : IDisposable
             var type = dictionary.Get<PdfName>("Type");
             var subtype = dictionary.Get<PdfName>("S");
             if (type?.Value != "OutputIntent" || subtype?.Value != "GTS_PDFA1")
-                Throw(HaruStatus.InvalidDocumentState, "PDF/A output intents must use /Type /OutputIntent and /S /GTS_PDFA1.");
+                Throw(HaruStatus.InvalidDocumentState,
+                    "PDF/A output intents must use /Type /OutputIntent and /S /GTS_PDFA1.");
 
             var profile = dictionary.GetItem("DestOutputProfile", PdfObjectClass.Dictionary);
             if (profile is not PdfStreamObject profileStream)
             {
-                Throw(HaruStatus.InvalidDocumentState, "PDF/A output intents require an ICC destination profile stream.");
+                Throw(HaruStatus.InvalidDocumentState,
+                    "PDF/A output intents require an ICC destination profile stream.");
                 throw new UnreachableException();
             }
 
             var components = profileStream.Dictionary.Get<PdfInteger>("N");
             if (components is null || components.Value is not (1 or 3 or 4))
-                Throw(HaruStatus.InvalidIccComponentNum, "PDF/A ICC destination profile must declare 1, 3, or 4 components.");
+                Throw(HaruStatus.InvalidIccComponentNum,
+                    "PDF/A ICC destination profile must declare 1, 3, or 4 components.");
         }
     }
 
@@ -2385,37 +2451,43 @@ public sealed class PdfDocument : IDisposable
             Throw(HaruStatus.InvalidDocumentState, "PDF/A-4 metadata requires pdfaid:rev 2020.");
     }
 
-    private static (string Part, string Conformance, bool RequiresRevision) PdfAIdentification(PdfPdfAType type) => type switch
+    private static (string Part, string Conformance, bool RequiresRevision) PdfAIdentification(PdfPdfAType type)
     {
-        PdfPdfAType.PdfA1A => ("1", "A", false),
-        PdfPdfAType.PdfA1B => ("1", "B", false),
-        PdfPdfAType.PdfA2A => ("2", "A", false),
-        PdfPdfAType.PdfA2B => ("2", "B", false),
-        PdfPdfAType.PdfA2U => ("2", "U", false),
-        PdfPdfAType.PdfA3A => ("3", "A", false),
-        PdfPdfAType.PdfA3B => ("3", "B", false),
-        PdfPdfAType.PdfA3U => ("3", "U", false),
-        PdfPdfAType.PdfA4 => ("4", string.Empty, true),
-        PdfPdfAType.PdfA4E => ("4", "E", true),
-        PdfPdfAType.PdfA4F => ("4", "F", true),
-        _ => (string.Empty, string.Empty, false)
-    };
+        return type switch
+        {
+            PdfPdfAType.PdfA1A => ("1", "A", false),
+            PdfPdfAType.PdfA1B => ("1", "B", false),
+            PdfPdfAType.PdfA2A => ("2", "A", false),
+            PdfPdfAType.PdfA2B => ("2", "B", false),
+            PdfPdfAType.PdfA2U => ("2", "U", false),
+            PdfPdfAType.PdfA3A => ("3", "A", false),
+            PdfPdfAType.PdfA3B => ("3", "B", false),
+            PdfPdfAType.PdfA3U => ("3", "U", false),
+            PdfPdfAType.PdfA4 => ("4", string.Empty, true),
+            PdfPdfAType.PdfA4E => ("4", "E", true),
+            PdfPdfAType.PdfA4F => ("4", "F", true),
+            _ => (string.Empty, string.Empty, false)
+        };
+    }
 
     private static bool ContainsXmlScalar(string xml, string name, string value)
     {
         return xml.Contains($"{name}='{value}'", StringComparison.Ordinal)
-            || xml.Contains($"{name}=\"{value}\"", StringComparison.Ordinal)
-            || xml.Contains($"<{name}>{value}</{name}>", StringComparison.Ordinal);
+               || xml.Contains($"{name}=\"{value}\"", StringComparison.Ordinal)
+               || xml.Contains($"<{name}>{value}</{name}>", StringComparison.Ordinal);
     }
 
-    private static string MinPdfVersionForPdfA(PdfPdfAType type) => type switch
+    private static string MinPdfVersionForPdfA(PdfPdfAType type)
     {
-        PdfPdfAType.PdfA1A or PdfPdfAType.PdfA1B => "1.4",
-        PdfPdfAType.PdfA2A or PdfPdfAType.PdfA2B or PdfPdfAType.PdfA2U
-            or PdfPdfAType.PdfA3A or PdfPdfAType.PdfA3B or PdfPdfAType.PdfA3U => "1.7",
-        PdfPdfAType.PdfA4 or PdfPdfAType.PdfA4E or PdfPdfAType.PdfA4F => "2.0",
-        _ => "1.4"
-    };
+        return type switch
+        {
+            PdfPdfAType.PdfA1A or PdfPdfAType.PdfA1B => "1.4",
+            PdfPdfAType.PdfA2A or PdfPdfAType.PdfA2B or PdfPdfAType.PdfA2U
+                or PdfPdfAType.PdfA3A or PdfPdfAType.PdfA3B or PdfPdfAType.PdfA3U => "1.7",
+            PdfPdfAType.PdfA4 or PdfPdfAType.PdfA4E or PdfPdfAType.PdfA4F => "2.0",
+            _ => "1.4"
+        };
+    }
 
     private void EnsurePdfVersion(string minimumVersion)
     {
@@ -2530,16 +2602,17 @@ public sealed class PdfDocument : IDisposable
 
         trailer.WriteTo(writer);
         writer.WriteAscii("\nstartxref\n");
-        writer.WriteLineAscii(xrefOffset.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        writer.WriteLineAscii(xrefOffset.ToString(CultureInfo.InvariantCulture));
         writer.WriteAscii("%%EOF\n");
     }
 
-    private PdfStreamObject CreateImageStream(byte[] data, int width, int height, PdfColorSpace colorSpace, int bitsPerComponent, PdfObject? colorSpaceObject = null)
+    private PdfStreamObject CreateImageStream(byte[] data, int width, int height, PdfColorSpace colorSpace,
+        int bitsPerComponent, PdfObject? colorSpaceObject = null)
     {
         var stream = new PdfStreamObject(data)
         {
             Kind = PdfStreamKind.Image,
-            CompressionMode = _compressionMode,
+            CompressionMode = CompressionMode,
             Subclass = PdfObjectClass.XObject
         };
         stream.Dictionary.SetName("Type", "XObject");
@@ -2592,7 +2665,8 @@ public sealed class PdfDocument : IDisposable
         page.ValidateOrThrow();
     }
 
-    private (double Left, double Bottom, double Right, double Top, double Width, double Height) NormalizeXObjectRect(PdfRect rect)
+    private (double Left, double Bottom, double Right, double Top, double Width, double Height)
+        NormalizeXObjectRect(PdfRect rect)
     {
         if (!IsFinite(rect.Left) || !IsFinite(rect.Bottom) || !IsFinite(rect.Right) || !IsFinite(rect.Top))
             Throw(HaruStatus.PageInvalidBoundary, "XObject rectangle coordinates must be finite.");
@@ -2623,10 +2697,11 @@ public sealed class PdfDocument : IDisposable
             ]);
         }
 
-        return CreatePngBaseColorSpace(png.ColorSpace, png.ColorManagement, allowDeviceFallback: true);
+        return CreatePngBaseColorSpace(png.ColorSpace, png.ColorManagement, true);
     }
 
-    private PdfObject CreatePngBaseColorSpace(PdfColorSpace colorSpace, PngColorManagementData? colorManagement, bool allowDeviceFallback = false)
+    private PdfObject CreatePngBaseColorSpace(PdfColorSpace colorSpace, PngColorManagementData? colorManagement,
+        bool allowDeviceFallback = false)
     {
         var managed = CreatePngManagedColorSpace(colorSpace, colorManagement);
         if (managed is not null)
@@ -2648,7 +2723,7 @@ public sealed class PdfDocument : IDisposable
             var profileStream = new PdfStreamObject(profile)
             {
                 Kind = PdfStreamKind.IccProfile,
-                CompressionMode = _compressionMode,
+                CompressionMode = CompressionMode,
                 Subclass = PdfObjectClass.IccProfile
             };
             profileStream.Dictionary.Set("N", new PdfInteger(colorSpace == PdfColorSpace.DeviceGray ? 1 : 3));
@@ -2686,11 +2761,13 @@ public sealed class PdfDocument : IDisposable
         if (colorManagement.Gamma is { } gamma)
         {
             var pdfGamma = ToPdfGamma(gamma);
-            dictionary.Set("Gamma", new PdfArray([new PdfReal(pdfGamma), new PdfReal(pdfGamma), new PdfReal(pdfGamma)]));
+            dictionary.Set("Gamma",
+                new PdfArray([new PdfReal(pdfGamma), new PdfReal(pdfGamma), new PdfReal(pdfGamma)]));
         }
 
         if (colorManagement.Chromaticities is { } chromaticities)
-            dictionary.Set("Matrix", new PdfArray(RgbToXyzMatrixValues(chromaticities).Select(static value => new PdfReal(value))));
+            dictionary.Set("Matrix",
+                new PdfArray(RgbToXyzMatrixValues(chromaticities).Select(static value => new PdfReal(value))));
 
         return new PdfArray([new PdfName("CalRGB"), dictionary]);
     }
@@ -2758,16 +2835,21 @@ public sealed class PdfDocument : IDisposable
         double a20, double a21, double a22)
     {
         return a00 * (a11 * a22 - a12 * a21)
-            - a01 * (a10 * a22 - a12 * a20)
-            + a02 * (a10 * a21 - a11 * a20);
+               - a01 * (a10 * a22 - a12 * a20)
+               + a02 * (a10 * a21 - a11 * a20);
     }
 
-    private static double ToPdfGamma(double pngGamma) => pngGamma <= 0 ? 1 : 1 / pngGamma;
+    private static double ToPdfGamma(double pngGamma)
+    {
+        return pngGamma <= 0 ? 1 : 1 / pngGamma;
+    }
 
-    private PdfImage RegisterImage(PdfStreamObject stream, int width, int height, int bitsPerComponent, PdfColorSpace colorSpace)
+    private PdfImage RegisterImage(PdfStreamObject stream, int width, int height, int bitsPerComponent,
+        PdfColorSpace colorSpace)
     {
         var imageObject = AddObject(stream);
-        var image = new PdfImage(this, $"Im{_images.Count + 1}", imageObject, width, height, bitsPerComponent, colorSpace, ColorSpaceName(colorSpace));
+        var image = new PdfImage(this, $"Im{_images.Count + 1}", imageObject, width, height, bitsPerComponent,
+            colorSpace, ColorSpaceName(colorSpace));
         _images.Add(image);
         return image;
     }
@@ -2777,7 +2859,8 @@ public sealed class PdfDocument : IDisposable
         var function = new PdfDictionary();
         function.Set("FunctionType", new PdfInteger(2));
         function.Set("Domain", new PdfArray([new PdfInteger(0), new PdfInteger(1)]));
-        function.Set("C0", new PdfArray([new PdfReal(startColor.R), new PdfReal(startColor.G), new PdfReal(startColor.B)]));
+        function.Set("C0",
+            new PdfArray([new PdfReal(startColor.R), new PdfReal(startColor.G), new PdfReal(startColor.B)]));
         function.Set("C1", new PdfArray([new PdfReal(endColor.R), new PdfReal(endColor.G), new PdfReal(endColor.B)]));
         function.Set("N", new PdfReal(1));
         return function;
@@ -2801,26 +2884,34 @@ public sealed class PdfDocument : IDisposable
             Throw(HaruStatus.InvalidColorSpace, "RGB color components must be between 0 and 1.");
     }
 
-    private static PdfArray Point3DArray(PdfPoint3D point) =>
-        new([new PdfReal(point.X), new PdfReal(point.Y), new PdfReal(point.Z)]);
-
-    private static bool IsUnit(double value) => value is >= 0 and <= 1 && !double.IsNaN(value) && !double.IsInfinity(value);
-
-    private string ColorSpaceName(PdfColorSpace colorSpace) => colorSpace switch
+    private static PdfArray Point3DArray(PdfPoint3D point)
     {
-        PdfColorSpace.DeviceGray => "DeviceGray",
-        PdfColorSpace.DeviceRgb => "DeviceRGB",
-        PdfColorSpace.DeviceCmyk => "DeviceCMYK",
-        PdfColorSpace.CalGray => "CalGray",
-        PdfColorSpace.CalRgb => "CalRGB",
-        PdfColorSpace.Lab => "Lab",
-        PdfColorSpace.IccBased => "ICCBased",
-        PdfColorSpace.Separation => "Separation",
-        PdfColorSpace.DeviceN => "DeviceN",
-        PdfColorSpace.Indexed => "Indexed",
-        PdfColorSpace.Pattern => "Pattern",
-        _ => throw CreateException(HaruStatus.InvalidColorSpace, "Invalid image color space.")
-    };
+        return new PdfArray([new PdfReal(point.X), new PdfReal(point.Y), new PdfReal(point.Z)]);
+    }
+
+    private static bool IsUnit(double value)
+    {
+        return value is >= 0 and <= 1 && !double.IsNaN(value) && !double.IsInfinity(value);
+    }
+
+    private string ColorSpaceName(PdfColorSpace colorSpace)
+    {
+        return colorSpace switch
+        {
+            PdfColorSpace.DeviceGray => "DeviceGray",
+            PdfColorSpace.DeviceRgb => "DeviceRGB",
+            PdfColorSpace.DeviceCmyk => "DeviceCMYK",
+            PdfColorSpace.CalGray => "CalGray",
+            PdfColorSpace.CalRgb => "CalRGB",
+            PdfColorSpace.Lab => "Lab",
+            PdfColorSpace.IccBased => "ICCBased",
+            PdfColorSpace.Separation => "Separation",
+            PdfColorSpace.DeviceN => "DeviceN",
+            PdfColorSpace.Indexed => "Indexed",
+            PdfColorSpace.Pattern => "Pattern",
+            _ => throw CreateException(HaruStatus.InvalidColorSpace, "Invalid image color space.")
+        };
+    }
 
     private void ValidateImageDimensions(int width, int height)
     {
@@ -2841,7 +2932,8 @@ public sealed class PdfDocument : IDisposable
             PdfColorSpace.DeviceGray => 1,
             PdfColorSpace.DeviceRgb => 3,
             PdfColorSpace.DeviceCmyk => 4,
-            _ => throw CreateException(HaruStatus.InvalidColorSpace, "Raw images require DeviceGray, DeviceRGB, or DeviceCMYK color spaces.")
+            _ => throw CreateException(HaruStatus.InvalidColorSpace,
+                "Raw images require DeviceGray, DeviceRGB, or DeviceCMYK color spaces.")
         };
     }
 
@@ -2920,18 +3012,6 @@ public sealed class PdfDocument : IDisposable
         throw CreateException(HaruStatus.UnsupportedJpegFormat, "JPEG SOF marker was not found.");
     }
 
-    private sealed record PdfCompositeFontBinding(
-        PdfFont Font,
-        PdfCompositeGlyphMap GlyphMap,
-        PdfCompositeFontObjects Objects);
-
-    private sealed record PdfCompositeFontObjects(
-        PdfDictionary Descendant,
-        PdfStreamObject? CidToGidMapStream,
-        PdfStreamObject ToUnicodeStream);
-
-    private readonly record struct JpegHeader(int Width, int Height, int BitsPerComponent, PdfColorSpace ColorSpace);
-
     internal HaruException CreateException(uint status, string message, uint detail = HaruStatus.NoError)
     {
         Error.RaiseError(status, detail);
@@ -2952,26 +3032,35 @@ public sealed class PdfDocument : IDisposable
         throw CreateException(status, message, detail);
     }
 
-    private static string PageLayoutName(PdfPageLayout layout) => layout switch
+    private static string PageLayoutName(PdfPageLayout layout)
     {
-        PdfPageLayout.Single => "SinglePage",
-        PdfPageLayout.OneColumn => "OneColumn",
-        PdfPageLayout.TwoColumnLeft => "TwoColumnLeft",
-        PdfPageLayout.TwoColumnRight => "TwoColumnRight",
-        _ => "SinglePage"
-    };
+        return layout switch
+        {
+            PdfPageLayout.Single => "SinglePage",
+            PdfPageLayout.OneColumn => "OneColumn",
+            PdfPageLayout.TwoColumnLeft => "TwoColumnLeft",
+            PdfPageLayout.TwoColumnRight => "TwoColumnRight",
+            _ => "SinglePage"
+        };
+    }
 
-    private static string PageModeName(PdfPageMode mode) => mode switch
+    private static string PageModeName(PdfPageMode mode)
     {
-        PdfPageMode.UseNone => "UseNone",
-        PdfPageMode.UseOutline => "UseOutlines",
-        PdfPageMode.UseThumbs => "UseThumbs",
-        PdfPageMode.FullScreen => "FullScreen",
-        PdfPageMode.UseAttachments => "UseAttachments",
-        _ => "UseNone"
-    };
+        return mode switch
+        {
+            PdfPageMode.UseNone => "UseNone",
+            PdfPageMode.UseOutline => "UseOutlines",
+            PdfPageMode.UseThumbs => "UseThumbs",
+            PdfPageMode.FullScreen => "FullScreen",
+            PdfPageMode.UseAttachments => "UseAttachments",
+            _ => "UseNone"
+        };
+    }
 
-    internal static string FormatPdfDate(DateTimeOffset value) => PdfDate(value);
+    internal static string FormatPdfDate(DateTimeOffset value)
+    {
+        return PdfDate(value);
+    }
 
     private static string PdfDate(DateTimeOffset value)
     {
@@ -2981,7 +3070,10 @@ public sealed class PdfDocument : IDisposable
         return $"D:{value:yyyyMMddHHmmss}{sign}{offset.Hours:00}'{offset.Minutes:00}'";
     }
 
-    private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+    private static bool IsFinite(double value)
+    {
+        return !double.IsNaN(value) && !double.IsInfinity(value);
+    }
 
     private string CreatePdfAXmp(PdfPdfAType pdfAType)
     {
@@ -3008,18 +3100,30 @@ public sealed class PdfDocument : IDisposable
             : $"<pdfaid:rev>{revision}</pdfaid:rev>";
 
         return $"""
-            <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-            <x:xmpmeta xmlns:x='adobe:ns:meta/'>
-              <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-                <rdf:Description rdf:about='' xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-                  <pdfaid:part>{part}</pdfaid:part>
-                  <pdfaid:conformance>{conformance}</pdfaid:conformance>
-                  {revisionElement}
-                </rdf:Description>
-                {extensions}
-              </rdf:RDF>
-            </x:xmpmeta>
-            <?xpacket end='w'?>
-            """;
+                <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+                <x:xmpmeta xmlns:x='adobe:ns:meta/'>
+                  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+                    <rdf:Description rdf:about='' xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+                      <pdfaid:part>{part}</pdfaid:part>
+                      <pdfaid:conformance>{conformance}</pdfaid:conformance>
+                      {revisionElement}
+                    </rdf:Description>
+                    {extensions}
+                  </rdf:RDF>
+                </x:xmpmeta>
+                <?xpacket end='w'?>
+                """;
     }
+
+    private sealed record PdfCompositeFontBinding(
+        PdfFont Font,
+        PdfCompositeGlyphMap GlyphMap,
+        PdfCompositeFontObjects Objects);
+
+    private sealed record PdfCompositeFontObjects(
+        PdfDictionary Descendant,
+        PdfStreamObject? CidToGidMapStream,
+        PdfStreamObject ToUnicodeStream);
+
+    private readonly record struct JpegHeader(int Width, int Height, int BitsPerComponent, PdfColorSpace ColorSpace);
 }

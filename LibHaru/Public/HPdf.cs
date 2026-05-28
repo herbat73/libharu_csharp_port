@@ -2,22 +2,35 @@ namespace LibHaru;
 
 public static class HPdf
 {
-    public static string HPDF_GetVersion() => HaruVersion.Text;
+    public static string HPDF_GetVersion()
+    {
+        return HaruVersion.Text;
+    }
 
-    public static PdfDocument HPDF_New(HaruErrorHandler? errorHandler = null, object? userData = null) =>
-        PdfDocument.New(errorHandler, userData);
+    public static PdfDocument HPDF_New(HaruErrorHandler? errorHandler = null, object? userData = null)
+    {
+        return PdfDocument.New(errorHandler, userData);
+    }
 
     public static PdfDocument HPDF_NewEx(
         HaruErrorHandler? errorHandler = null,
         object? userAllocFunc = null,
         object? userFreeFunc = null,
         uint memPoolBufSize = 0,
-        object? userData = null) =>
-        PdfDocument.New(errorHandler, userData);
+        object? userData = null)
+    {
+        return PdfDocument.New(errorHandler, userData);
+    }
 
-    public static void HPDF_Free(PdfDocument? pdf) => pdf?.Dispose();
+    public static void HPDF_Free(PdfDocument? pdf)
+    {
+        pdf?.Dispose();
+    }
 
-    public static PdfDocument HPDF_GetDocMMgr(PdfDocument pdf) => pdf;
+    public static PdfDocument HPDF_GetDocMMgr(PdfDocument pdf)
+    {
+        return pdf;
+    }
 
     public static uint HPDF_NewDoc(PdfDocument pdf)
     {
@@ -25,11 +38,20 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static void HPDF_FreeDoc(PdfDocument? pdf) => pdf?.FreeDoc();
+    public static void HPDF_FreeDoc(PdfDocument? pdf)
+    {
+        pdf?.FreeDoc();
+    }
 
-    public static bool HPDF_HasDoc(PdfDocument? pdf) => pdf?.HasDoc() == true;
+    public static bool HPDF_HasDoc(PdfDocument? pdf)
+    {
+        return pdf?.HasDoc() == true;
+    }
 
-    public static void HPDF_FreeDocAll(PdfDocument? pdf) => pdf?.FreeDocAll();
+    public static void HPDF_FreeDocAll(PdfDocument? pdf)
+    {
+        pdf?.FreeDocAll();
+    }
 
     public static uint HPDF_SetPagesConfiguration(PdfDocument pdf, uint pagePerPages)
     {
@@ -43,15 +65,30 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_GetError(PdfDocument pdf) => pdf.GetError();
+    public static uint HPDF_GetError(PdfDocument pdf)
+    {
+        return pdf.GetError();
+    }
 
-    public static uint HPDF_GetErrorDetail(PdfDocument pdf) => pdf.GetErrorDetail();
+    public static uint HPDF_GetErrorDetail(PdfDocument pdf)
+    {
+        return pdf.GetErrorDetail();
+    }
 
-    public static void HPDF_ResetError(PdfDocument pdf) => pdf.ResetError();
+    public static void HPDF_ResetError(PdfDocument pdf)
+    {
+        pdf.ResetError();
+    }
 
-    public static uint HPDF_CheckError(HaruError error) => error.CheckError();
+    public static uint HPDF_CheckError(HaruError error)
+    {
+        return error.CheckError();
+    }
 
-    public static uint HPDF_CheckError(PdfDocument pdf) => pdf.CheckError();
+    public static uint HPDF_CheckError(PdfDocument pdf)
+    {
+        return pdf.CheckError();
+    }
 
     public static uint HPDF_SaveToFile(PdfDocument pdf, string fileName)
     {
@@ -59,11 +96,20 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static byte[] HPDF_SaveToStream(PdfDocument pdf) => pdf.SaveToStream();
+    public static byte[] HPDF_SaveToStream(PdfDocument pdf)
+    {
+        return pdf.SaveToStream();
+    }
 
-    public static uint HPDF_GetStreamSize(PdfDocument pdf) => pdf.GetStreamSize();
+    public static uint HPDF_GetStreamSize(PdfDocument pdf)
+    {
+        return pdf.GetStreamSize();
+    }
 
-    public static byte[] HPDF_ReadFromStream(PdfDocument pdf, uint size) => pdf.ReadFromStream(size);
+    public static byte[] HPDF_ReadFromStream(PdfDocument pdf, uint size)
+    {
+        return pdf.ReadFromStream(size);
+    }
 
     public static uint HPDF_ReadFromStream(PdfDocument pdf, byte[] buffer, ref uint size)
     {
@@ -72,32 +118,63 @@ public static class HPdf
 
         var data = pdf.ReadFromStream(size);
         if (data.Length > buffer.Length)
-            throw pdf.CreateException(HaruStatus.InvalidParameter, "Read buffer is smaller than requested stream data.");
+            throw pdf.CreateException(HaruStatus.InvalidParameter,
+                "Read buffer is smaller than requested stream data.");
 
         Array.Copy(data, buffer, data.Length);
         size = (uint)data.Length;
         return HaruStatus.OK;
     }
 
-    public static byte[] HPDF_GetContents(PdfDocument pdf) => pdf.GetContents();
+    public static byte[] HPDF_GetContents(PdfDocument pdf)
+    {
+        return pdf.GetContents();
+    }
 
-    public static void HPDF_ResetStream(PdfDocument pdf) => pdf.ResetStream();
+    public static void HPDF_ResetStream(PdfDocument pdf)
+    {
+        pdf.ResetStream();
+    }
 
-    public static PdfPage HPDF_AddPage(PdfDocument pdf) => pdf.AddPage();
+    public static PdfPage HPDF_AddPage(PdfDocument pdf)
+    {
+        return pdf.AddPage();
+    }
 
-    public static PdfPage HPDF_InsertPage(PdfDocument pdf, PdfPage beforePage) => pdf.InsertPage(beforePage);
+    public static PdfPage HPDF_InsertPage(PdfDocument pdf, PdfPage beforePage)
+    {
+        return pdf.InsertPage(beforePage);
+    }
 
-    public static PdfPage HPDF_GetPageByIndex(PdfDocument pdf, uint index) => pdf.GetPageByIndex((int)index);
+    public static PdfPage HPDF_GetPageByIndex(PdfDocument pdf, uint index)
+    {
+        return pdf.GetPageByIndex((int)index);
+    }
 
-    public static PdfPage? HPDF_GetCurrentPage(PdfDocument pdf) => pdf.CurrentPage;
+    public static PdfPage? HPDF_GetCurrentPage(PdfDocument pdf)
+    {
+        return pdf.CurrentPage;
+    }
 
-    public static PdfDocument HPDF_GetPageMMgr(PdfPage page) => page.Owner;
+    public static PdfDocument HPDF_GetPageMMgr(PdfPage page)
+    {
+        return page.Owner;
+    }
 
-    public static PdfFont HPDF_GetFont(PdfDocument pdf, string fontName, string? encoding = null) => pdf.GetFont(fontName, encoding);
+    public static PdfFont HPDF_GetFont(PdfDocument pdf, string fontName, string? encoding = null)
+    {
+        return pdf.GetFont(fontName, encoding);
+    }
 
-    public static PdfEncoder HPDF_GetEncoder(PdfDocument pdf, string encodingName) => pdf.GetEncoder(encodingName);
+    public static PdfEncoder HPDF_GetEncoder(PdfDocument pdf, string encodingName)
+    {
+        return pdf.GetEncoder(encodingName);
+    }
 
-    public static PdfEncoder? HPDF_GetCurrentEncoder(PdfDocument pdf) => pdf.CurrentEncoder;
+    public static PdfEncoder? HPDF_GetCurrentEncoder(PdfDocument pdf)
+    {
+        return pdf.CurrentEncoder;
+    }
 
     public static uint HPDF_SetCurrentEncoder(PdfDocument pdf, string encodingName)
     {
@@ -105,23 +182,40 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfEncoderType HPDF_Encoder_GetType(PdfEncoder encoder) => encoder.Type;
+    public static PdfEncoderType HPDF_Encoder_GetType(PdfEncoder encoder)
+    {
+        return encoder.Type;
+    }
 
-    public static PdfByteType HPDF_Encoder_GetByteType(PdfEncoder encoder, string text, uint index) =>
-        encoder.GetByteType(text, index);
+    public static PdfByteType HPDF_Encoder_GetByteType(PdfEncoder encoder, string text, uint index)
+    {
+        return encoder.GetByteType(text, index);
+    }
 
-    public static ushort HPDF_Encoder_GetUnicode(PdfEncoder encoder, ushort code) => encoder.GetUnicode(code);
+    public static ushort HPDF_Encoder_GetUnicode(PdfEncoder encoder, ushort code)
+    {
+        return encoder.GetUnicode(code);
+    }
 
-    public static PdfWritingMode HPDF_Encoder_GetWritingMode(PdfEncoder encoder) => encoder.WritingMode;
+    public static PdfWritingMode HPDF_Encoder_GetWritingMode(PdfEncoder encoder)
+    {
+        return encoder.WritingMode;
+    }
 
-    public static string HPDF_LoadType1FontFromFile(PdfDocument pdf, string afmFileName, string? dataFileName = null) =>
-        pdf.LoadType1FontFromFile(afmFileName, dataFileName);
+    public static string HPDF_LoadType1FontFromFile(PdfDocument pdf, string afmFileName, string? dataFileName = null)
+    {
+        return pdf.LoadType1FontFromFile(afmFileName, dataFileName);
+    }
 
-    public static string HPDF_LoadTTFontFromFile(PdfDocument pdf, string fileName, bool embedding) =>
-        pdf.LoadTTFontFromFile(fileName, embedding);
+    public static string HPDF_LoadTTFontFromFile(PdfDocument pdf, string fileName, bool embedding)
+    {
+        return pdf.LoadTTFontFromFile(fileName, embedding);
+    }
 
-    public static PdfFontDef HPDF_GetTTFontDefFromFile(PdfDocument pdf, string fileName, bool embedding) =>
-        pdf.GetTTFontDefFromFile(fileName, embedding);
+    public static PdfFontDef HPDF_GetTTFontDefFromFile(PdfDocument pdf, string fileName, bool embedding)
+    {
+        return pdf.GetTTFontDefFromFile(fileName, embedding);
+    }
 
     public static string HPDF_LoadTTFontFromFile2(PdfDocument pdf, string fileName, uint index, bool embedding)
     {
@@ -131,26 +225,55 @@ public static class HPdf
         return pdf.LoadTTFontFromFile2(fileName, (int)index, embedding);
     }
 
-    public static string HPDF_LoadTTFontFromMemory(PdfDocument pdf, byte[] buffer, bool embedding) =>
-        pdf.LoadTTFontFromMemory(buffer, embedding);
+    public static string HPDF_LoadTTFontFromMemory(PdfDocument pdf, byte[] buffer, bool embedding)
+    {
+        return pdf.LoadTTFontFromMemory(buffer, embedding);
+    }
 
-    public static string HPDF_Font_GetFontName(PdfFont font) => font.BaseFont;
+    public static string HPDF_Font_GetFontName(PdfFont font)
+    {
+        return font.BaseFont;
+    }
 
-    public static string HPDF_Font_GetEncodingName(PdfFont font) => font.Encoding;
+    public static string HPDF_Font_GetEncodingName(PdfFont font)
+    {
+        return font.Encoding;
+    }
 
-    public static int HPDF_Font_GetUnicodeWidth(PdfFont font, char code) => font.GetUnicodeWidth(code);
+    public static int HPDF_Font_GetUnicodeWidth(PdfFont font, char code)
+    {
+        return font.GetUnicodeWidth(code);
+    }
 
-    public static PdfRect HPDF_Font_GetBBox(PdfFont font) => font.BBox;
+    public static PdfRect HPDF_Font_GetBBox(PdfFont font)
+    {
+        return font.BBox;
+    }
 
-    public static int HPDF_Font_GetAscent(PdfFont font) => font.Ascent;
+    public static int HPDF_Font_GetAscent(PdfFont font)
+    {
+        return font.Ascent;
+    }
 
-    public static int HPDF_Font_GetDescent(PdfFont font) => font.Descent;
+    public static int HPDF_Font_GetDescent(PdfFont font)
+    {
+        return font.Descent;
+    }
 
-    public static int HPDF_Font_GetXHeight(PdfFont font) => font.XHeight;
+    public static int HPDF_Font_GetXHeight(PdfFont font)
+    {
+        return font.XHeight;
+    }
 
-    public static int HPDF_Font_GetCapHeight(PdfFont font) => font.CapHeight;
+    public static int HPDF_Font_GetCapHeight(PdfFont font)
+    {
+        return font.CapHeight;
+    }
 
-    public static PdfTextWidth HPDF_Font_TextWidth(PdfFont font, string text) => font.TextWidthInfo(text);
+    public static PdfTextWidth HPDF_Font_TextWidth(PdfFont font, string text)
+    {
+        return font.TextWidthInfo(text);
+    }
 
     public static uint HPDF_Font_MeasureText(
         PdfFont font,
@@ -160,8 +283,10 @@ public static class HPdf
         double charSpace,
         double wordSpace,
         bool wordWrap,
-        out double realWidth) =>
-        font.MeasureText(text, width, fontSize, charSpace, wordSpace, wordWrap, out realWidth);
+        out double realWidth)
+    {
+        return font.MeasureText(text, width, fontSize, charSpace, wordSpace, wordWrap, out realWidth);
+    }
 
     public static uint HPDF_SetCompressionMode(PdfDocument pdf, CompressionMode mode)
     {
@@ -175,7 +300,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfPageLayout HPDF_GetPageLayout(PdfDocument pdf) => pdf.PageLayout;
+    public static PdfPageLayout HPDF_GetPageLayout(PdfDocument pdf)
+    {
+        return pdf.PageLayout;
+    }
 
     public static uint HPDF_SetPageMode(PdfDocument pdf, PdfPageMode mode)
     {
@@ -183,7 +311,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfPageMode HPDF_GetPageMode(PdfDocument pdf) => pdf.PageMode;
+    public static PdfPageMode HPDF_GetPageMode(PdfDocument pdf)
+    {
+        return pdf.PageMode;
+    }
 
     public static uint HPDF_SetViewerPreference(PdfDocument pdf, PdfViewerPreference preference)
     {
@@ -191,7 +322,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfViewerPreference HPDF_GetViewerPreference(PdfDocument pdf) => pdf.ViewerPreference;
+    public static PdfViewerPreference HPDF_GetViewerPreference(PdfDocument pdf)
+    {
+        return pdf.ViewerPreference;
+    }
 
     public static uint HPDF_SetOpenAction(PdfDocument pdf, PdfDestination destination)
     {
@@ -205,7 +339,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_AddPageLabel(PdfDocument pdf, uint pageNum, PdfPageNumStyle style, uint firstPage = 1, string prefix = "")
+    public static uint HPDF_AddPageLabel(PdfDocument pdf, uint pageNum, PdfPageNumStyle style, uint firstPage = 1,
+        string prefix = "")
     {
         if (pageNum > int.MaxValue || firstPage > int.MaxValue)
             throw pdf.CreateException(HaruStatus.InvalidParameter, "Page label values are too large.");
@@ -214,8 +349,11 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfOutline HPDF_CreateOutline(PdfDocument pdf, PdfOutline? parent, string title, object? encoder = null) =>
-        pdf.CreateOutline(parent, title);
+    public static PdfOutline HPDF_CreateOutline(PdfDocument pdf, PdfOutline? parent, string title,
+        object? encoder = null)
+    {
+        return pdf.CreateOutline(parent, title);
+    }
 
     public static uint HPDF_Outline_SetOpened(PdfOutline outline, bool opened)
     {
@@ -241,7 +379,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static string? HPDF_GetInfoAttr(PdfDocument pdf, PdfInfoType type) => pdf.GetInfoAttr(type);
+    public static string? HPDF_GetInfoAttr(PdfDocument pdf, PdfInfoType type)
+    {
+        return pdf.GetInfoAttr(type);
+    }
 
     public static uint HPDF_SetInfoDateAttr(PdfDocument pdf, PdfInfoType type, DateTimeOffset value)
     {
@@ -255,9 +396,15 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfJavaScript HPDF_CreateJavaScript(PdfDocument pdf, string code) => pdf.CreateJavaScript(code);
+    public static PdfJavaScript HPDF_CreateJavaScript(PdfDocument pdf, string code)
+    {
+        return pdf.CreateJavaScript(code);
+    }
 
-    public static PdfJavaScript HPDF_LoadJSFromFile(PdfDocument pdf, string fileName) => pdf.LoadJavaScriptFromFile(fileName);
+    public static PdfJavaScript HPDF_LoadJSFromFile(PdfDocument pdf, string fileName)
+    {
+        return pdf.LoadJavaScriptFromFile(fileName);
+    }
 
     public static uint HPDF_AddNamedJavaScript(PdfDocument pdf, string name, PdfJavaScript javaScript)
     {
@@ -265,7 +412,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfEmbeddedFile HPDF_AttachFile(PdfDocument pdf, string fileName) => pdf.AttachFile(fileName);
+    public static PdfEmbeddedFile HPDF_AttachFile(PdfDocument pdf, string fileName)
+    {
+        return pdf.AttachFile(fileName);
+    }
 
     public static uint HPDF_EmbeddedFile_SetName(PdfEmbeddedFile embeddedFile, string name)
     {
@@ -309,17 +459,27 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfOutputIntent HPDF_AppendOutputIntents(PdfDocument pdf, string outputConditionIdentifier, byte[] iccProfile, string? info = null) =>
-        pdf.AppendOutputIntent(outputConditionIdentifier, iccProfile, info);
+    public static PdfOutputIntent HPDF_AppendOutputIntents(PdfDocument pdf, string outputConditionIdentifier,
+        byte[] iccProfile, string? info = null)
+    {
+        return pdf.AppendOutputIntent(outputConditionIdentifier, iccProfile, info);
+    }
 
-    public static PdfOutputIntent HPDF_AppendOutputIntents(PdfDocument pdf, string outputConditionIdentifier, PdfIccProfile iccProfile, string? info = null) =>
-        pdf.AppendOutputIntent(outputConditionIdentifier, iccProfile, info);
+    public static PdfOutputIntent HPDF_AppendOutputIntents(PdfDocument pdf, string outputConditionIdentifier,
+        PdfIccProfile iccProfile, string? info = null)
+    {
+        return pdf.AppendOutputIntent(outputConditionIdentifier, iccProfile, info);
+    }
 
-    public static PdfIccProfile HPDF_ICC_LoadIccFromMem(PdfDocument pdf, byte[] iccProfile, int numcomponent) =>
-        pdf.LoadIccProfileFromMem(iccProfile, numcomponent);
+    public static PdfIccProfile HPDF_ICC_LoadIccFromMem(PdfDocument pdf, byte[] iccProfile, int numcomponent)
+    {
+        return pdf.LoadIccProfileFromMem(iccProfile, numcomponent);
+    }
 
-    public static PdfIccProfile HPDF_LoadIccProfileFromFile(PdfDocument pdf, string iccFileName, int numcomponent) =>
-        pdf.LoadIccProfileFromFile(iccFileName, numcomponent);
+    public static PdfIccProfile HPDF_LoadIccProfileFromFile(PdfDocument pdf, string iccFileName, int numcomponent)
+    {
+        return pdf.LoadIccProfileFromFile(iccFileName, numcomponent);
+    }
 
     public static uint HPDF_PDFA_SetPDFAConformance(PdfDocument pdf, PdfPdfAType pdfAType)
     {
@@ -327,8 +487,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_SetPDFAConformance(PdfDocument pdf, PdfPdfAType pdfAType) =>
-        HPDF_PDFA_SetPDFAConformance(pdf, pdfAType);
+    public static uint HPDF_SetPDFAConformance(PdfDocument pdf, PdfPdfAType pdfAType)
+    {
+        return HPDF_PDFA_SetPDFAConformance(pdf, pdfAType);
+    }
 
     public static uint HPDF_AddPDFAXmpExtension(PdfDocument pdf, string xmpExtension)
     {
@@ -336,7 +498,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfExtGState HPDF_CreateExtGState(PdfDocument pdf) => pdf.CreateExtGState();
+    public static PdfExtGState HPDF_CreateExtGState(PdfDocument pdf)
+    {
+        return pdf.CreateExtGState();
+    }
 
     public static uint HPDF_ExtGState_SetAlphaStroke(PdfExtGState extGState, double value)
     {
@@ -356,26 +521,47 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfShading HPDF_Shading_New(PdfDocument pdf, PdfShadingType type, PdfColorSpace colorSpace, double xMin, double xMax, double yMin, double yMax) =>
-        pdf.CreateShading(type, colorSpace, xMin, xMax, yMin, yMax);
+    public static PdfShading HPDF_Shading_New(PdfDocument pdf, PdfShadingType type, PdfColorSpace colorSpace,
+        double xMin, double xMax, double yMin, double yMax)
+    {
+        return pdf.CreateShading(type, colorSpace, xMin, xMax, yMin, yMax);
+    }
 
-    public static PdfShading HPDF_Shading_NewAxial(PdfDocument pdf, PdfPoint startPoint, PdfPoint endPoint, PdfRgbColor startColor, PdfRgbColor endColor, bool extendStart = false, bool extendEnd = false) =>
-        pdf.CreateAxialShading(startPoint, endPoint, startColor, endColor, extendStart, extendEnd);
+    public static PdfShading HPDF_Shading_NewAxial(PdfDocument pdf, PdfPoint startPoint, PdfPoint endPoint,
+        PdfRgbColor startColor, PdfRgbColor endColor, bool extendStart = false, bool extendEnd = false)
+    {
+        return pdf.CreateAxialShading(startPoint, endPoint, startColor, endColor, extendStart, extendEnd);
+    }
 
-    public static PdfShading HPDF_Shading_NewRadial(PdfDocument pdf, PdfPoint startCenter, double startRadius, PdfPoint endCenter, double endRadius, PdfRgbColor startColor, PdfRgbColor endColor, bool extendStart = false, bool extendEnd = false) =>
-        pdf.CreateRadialShading(startCenter, startRadius, endCenter, endRadius, startColor, endColor, extendStart, extendEnd);
+    public static PdfShading HPDF_Shading_NewRadial(PdfDocument pdf, PdfPoint startCenter, double startRadius,
+        PdfPoint endCenter, double endRadius, PdfRgbColor startColor, PdfRgbColor endColor, bool extendStart = false,
+        bool extendEnd = false)
+    {
+        return pdf.CreateRadialShading(startCenter, startRadius, endCenter, endRadius, startColor, endColor,
+            extendStart, extendEnd);
+    }
 
-    public static uint HPDF_Shading_AddVertexRGB(PdfShading shading, PdfShadingFreeFormTriangleMeshEdgeFlag edgeFlag, double x, double y, byte r, byte g, byte b)
+    public static uint HPDF_Shading_AddVertexRGB(PdfShading shading, PdfShadingFreeFormTriangleMeshEdgeFlag edgeFlag,
+        double x, double y, byte r, byte g, byte b)
     {
         shading.AddVertexRGB(edgeFlag, x, y, r, g, b);
         return HaruStatus.OK;
     }
 
-    public static PdfU3D HPDF_LoadU3DFromFile(PdfDocument pdf, string fileName) => pdf.LoadU3DFromFile(fileName);
+    public static PdfU3D HPDF_LoadU3DFromFile(PdfDocument pdf, string fileName)
+    {
+        return pdf.LoadU3DFromFile(fileName);
+    }
 
-    public static PdfU3D HPDF_LoadU3DFromMem(PdfDocument pdf, byte[] data) => pdf.LoadU3DFromMem(data);
+    public static PdfU3D HPDF_LoadU3DFromMem(PdfDocument pdf, byte[] data)
+    {
+        return pdf.LoadU3DFromMem(data);
+    }
 
-    public static Pdf3DView HPDF_Create3DView(PdfDocument pdf, string name) => pdf.Create3DView(name);
+    public static Pdf3DView HPDF_Create3DView(PdfDocument pdf, string name)
+    {
+        return pdf.Create3DView(name);
+    }
 
     public static uint HPDF_U3D_Add3DView(PdfU3D u3d, Pdf3DView view)
     {
@@ -402,7 +588,10 @@ public static class HPdf
         return view;
     }
 
-    public static Pdf3DNode HPDF_3DView_CreateNode(Pdf3DView view, string name) => view.CreateNode(name);
+    public static Pdf3DNode HPDF_3DView_CreateNode(Pdf3DView view, string name)
+    {
+        return view.CreateNode(name);
+    }
 
     public static uint HPDF_3DView_AddNode(Pdf3DView view, Pdf3DNode node)
     {
@@ -452,9 +641,11 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_3DView_SetCamera(Pdf3DView view, double centerX, double centerY, double centerZ, double cameraDirectionX, double cameraDirectionY, double cameraDirectionZ, double orbitRadius, double roll)
+    public static uint HPDF_3DView_SetCamera(Pdf3DView view, double centerX, double centerY, double centerZ,
+        double cameraDirectionX, double cameraDirectionY, double cameraDirectionZ, double orbitRadius, double roll)
     {
-        view.SetCamera(centerX, centerY, centerZ, cameraDirectionX, cameraDirectionY, cameraDirectionZ, orbitRadius, roll);
+        view.SetCamera(centerX, centerY, centerZ, cameraDirectionX, cameraDirectionY, cameraDirectionZ, orbitRadius,
+            roll);
         return HaruStatus.OK;
     }
 
@@ -464,7 +655,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_3DView_SetCrossSectionOn(Pdf3DView view, PdfPoint3D center, double roll, double pitch, double opacity, bool showIntersection)
+    public static uint HPDF_3DView_SetCrossSectionOn(Pdf3DView view, PdfPoint3D center, double roll, double pitch,
+        double opacity, bool showIntersection)
     {
         view.SetCrossSectionOn(center, roll, pitch, opacity, showIntersection);
         return HaruStatus.OK;
@@ -476,11 +668,19 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static Pdf3DMeasure HPDF_Page_Create3DC3DMeasure(PdfPage page, PdfPoint3D firstAnchorPoint, PdfPoint3D textAnchorPoint) =>
-        page.Owner.Create3DC3DMeasure(firstAnchorPoint, textAnchorPoint);
+    public static Pdf3DMeasure HPDF_Page_Create3DC3DMeasure(PdfPage page, PdfPoint3D firstAnchorPoint,
+        PdfPoint3D textAnchorPoint)
+    {
+        return page.Owner.Create3DC3DMeasure(firstAnchorPoint, textAnchorPoint);
+    }
 
-    public static Pdf3DMeasure HPDF_Page_CreatePD33DMeasure(PdfPage page, PdfPoint3D annotationPlaneNormal, PdfPoint3D firstAnchorPoint, PdfPoint3D secondAnchorPoint, PdfPoint3D leaderLinesDirection, PdfPoint3D measurementValuePoint, PdfPoint3D textYDirection, double value, string units) =>
-        page.Owner.CreatePD33DMeasure(annotationPlaneNormal, firstAnchorPoint, secondAnchorPoint, leaderLinesDirection, measurementValuePoint, textYDirection, value, units);
+    public static Pdf3DMeasure HPDF_Page_CreatePD33DMeasure(PdfPage page, PdfPoint3D annotationPlaneNormal,
+        PdfPoint3D firstAnchorPoint, PdfPoint3D secondAnchorPoint, PdfPoint3D leaderLinesDirection,
+        PdfPoint3D measurementValuePoint, PdfPoint3D textYDirection, double value, string units)
+    {
+        return page.Owner.CreatePD33DMeasure(annotationPlaneNormal, firstAnchorPoint, secondAnchorPoint,
+            leaderLinesDirection, measurementValuePoint, textYDirection, value, units);
+    }
 
     public static uint HPDF_3DMeasure_SetName(Pdf3DMeasure measure, string name)
     {
@@ -512,7 +712,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_3DC3DMeasure_SetProjectionAnotation(Pdf3DMeasure measure, PdfAnnotation projectionAnnotation)
+    public static uint HPDF_3DC3DMeasure_SetProjectionAnotation(Pdf3DMeasure measure,
+        PdfAnnotation projectionAnnotation)
     {
         measure.SetProjectionAnnotation(projectionAnnotation);
         return HaruStatus.OK;
@@ -644,22 +845,35 @@ public static class HPdf
         return pdf.LoadRaw1BitImageFromMem(data, (int)width, (int)height, (int)lineWidth, blackIs1, topIsFirst);
     }
 
-    public static PdfImage HPDF_LoadPngImageFromFile(PdfDocument pdf, string fileName) =>
-        pdf.LoadPngImageFromFile(fileName);
+    public static PdfImage HPDF_LoadPngImageFromFile(PdfDocument pdf, string fileName)
+    {
+        return pdf.LoadPngImageFromFile(fileName);
+    }
 
-    public static PdfImage HPDF_LoadPngImageFromFile2(PdfDocument pdf, string fileName) =>
-        pdf.LoadPngImageFromFile2(fileName);
+    public static PdfImage HPDF_LoadPngImageFromFile2(PdfDocument pdf, string fileName)
+    {
+        return pdf.LoadPngImageFromFile2(fileName);
+    }
 
-    public static PdfImage HPDF_LoadPngImageFromMem(PdfDocument pdf, byte[] data) =>
-        pdf.LoadPngImageFromMem(data);
+    public static PdfImage HPDF_LoadPngImageFromMem(PdfDocument pdf, byte[] data)
+    {
+        return pdf.LoadPngImageFromMem(data);
+    }
 
-    public static PdfImage HPDF_LoadJpegImageFromFile(PdfDocument pdf, string fileName) =>
-        pdf.LoadJpegImageFromFile(fileName);
+    public static PdfImage HPDF_LoadJpegImageFromFile(PdfDocument pdf, string fileName)
+    {
+        return pdf.LoadJpegImageFromFile(fileName);
+    }
 
-    public static PdfImage HPDF_LoadJpegImageFromMem(PdfDocument pdf, byte[] data) =>
-        pdf.LoadJpegImageFromMem(data);
+    public static PdfImage HPDF_LoadJpegImageFromMem(PdfDocument pdf, byte[] data)
+    {
+        return pdf.LoadJpegImageFromMem(data);
+    }
 
-    public static bool HPDF_Image_Validate(PdfImage? image) => image?.Validate() == true;
+    public static bool HPDF_Image_Validate(PdfImage? image)
+    {
+        return image?.Validate() == true;
+    }
 
     public static PdfPoint HPDF_Image_GetSize(PdfImage image)
     {
@@ -697,7 +911,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_Image_SetColorMask(PdfImage image, uint rMin, uint rMax, uint gMin, uint gMax, uint bMin, uint bMax)
+    public static uint HPDF_Image_SetColorMask(PdfImage image, uint rMin, uint rMax, uint gMin, uint gMax, uint bMin,
+        uint bMax)
     {
         image.SetColorMask(rMin, rMax, gMin, gMax, bMin, bMax);
         return HaruStatus.OK;
@@ -721,7 +936,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_Page_SetBoundary(PdfPage page, PdfPageBoundary boundary, double left, double bottom, double right, double top)
+    public static uint HPDF_Page_SetBoundary(PdfPage page, PdfPageBoundary boundary, double left, double bottom,
+        double right, double top)
     {
         page.SetBoundary(boundary, new PdfRect(left, bottom, right, top));
         return HaruStatus.OK;
@@ -739,9 +955,15 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetWidth(PdfPage page) => page.Width;
+    public static double HPDF_Page_GetWidth(PdfPage page)
+    {
+        return page.Width;
+    }
 
-    public static double HPDF_Page_GetHeight(PdfPage page) => page.Height;
+    public static double HPDF_Page_GetHeight(PdfPage page)
+    {
+        return page.Height;
+    }
 
     public static uint HPDF_Page_SetWidth(PdfPage page, double width)
     {
@@ -755,7 +977,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_Page_SetSlideShow(PdfPage page, PdfTransitionStyle style, double displayTime, double transitionTime)
+    public static uint HPDF_Page_SetSlideShow(PdfPage page, PdfTransitionStyle style, double displayTime,
+        double transitionTime)
     {
         page.SetSlideShow(style, displayTime, transitionTime);
         return HaruStatus.OK;
@@ -767,18 +990,36 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfFont? HPDF_Page_GetCurrentFont(PdfPage page) => page.CurrentFont;
+    public static PdfFont? HPDF_Page_GetCurrentFont(PdfPage page)
+    {
+        return page.CurrentFont;
+    }
 
-    public static double HPDF_Page_GetCurrentFontSize(PdfPage page) => page.CurrentFontSize;
+    public static double HPDF_Page_GetCurrentFontSize(PdfPage page)
+    {
+        return page.CurrentFontSize;
+    }
 
-    public static ushort HPDF_Page_GetGMode(PdfPage page) => (ushort)page.GraphicsMode;
+    public static ushort HPDF_Page_GetGMode(PdfPage page)
+    {
+        return (ushort)page.GraphicsMode;
+    }
 
-    public static PdfTransMatrix HPDF_Page_GetTransMatrix(PdfPage page) => page.TransMatrix;
+    public static PdfTransMatrix HPDF_Page_GetTransMatrix(PdfPage page)
+    {
+        return page.TransMatrix;
+    }
 
-    public static double HPDF_Page_TextWidth(PdfPage page, string text) => page.TextWidth(text);
+    public static double HPDF_Page_TextWidth(PdfPage page, string text)
+    {
+        return page.TextWidth(text);
+    }
 
-    public static int HPDF_Page_MeasureText(PdfPage page, string text, double width, bool wordWrap, out double realWidth) =>
-        page.MeasureText(text, width, wordWrap, out realWidth);
+    public static int HPDF_Page_MeasureText(PdfPage page, string text, double width, bool wordWrap,
+        out double realWidth)
+    {
+        return page.MeasureText(text, width, wordWrap, out realWidth);
+    }
 
     public static uint HPDF_Page_BeginText(PdfPage page)
     {
@@ -859,7 +1100,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfTextRenderingMode HPDF_Page_GetTextRenderingMode(PdfPage page) => page.TextRenderingMode;
+    public static PdfTextRenderingMode HPDF_Page_GetTextRenderingMode(PdfPage page)
+    {
+        return page.TextRenderingMode;
+    }
 
     public static uint HPDF_Page_SetCharSpace(PdfPage page, double value)
     {
@@ -867,7 +1111,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetCharSpace(PdfPage page) => page.CharSpace;
+    public static double HPDF_Page_GetCharSpace(PdfPage page)
+    {
+        return page.CharSpace;
+    }
 
     public static uint HPDF_Page_SetWordSpace(PdfPage page, double value)
     {
@@ -875,7 +1122,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetWordSpace(PdfPage page) => page.WordSpace;
+    public static double HPDF_Page_GetWordSpace(PdfPage page)
+    {
+        return page.WordSpace;
+    }
 
     public static uint HPDF_Page_SetHorizontalScalling(PdfPage page, double value)
     {
@@ -883,7 +1133,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetHorizontalScalling(PdfPage page) => page.HorizontalScalling;
+    public static double HPDF_Page_GetHorizontalScalling(PdfPage page)
+    {
+        return page.HorizontalScalling;
+    }
 
     public static uint HPDF_Page_SetTextLeading(PdfPage page, double value)
     {
@@ -891,7 +1144,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetTextLeading(PdfPage page) => page.TextLeading;
+    public static double HPDF_Page_GetTextLeading(PdfPage page)
+    {
+        return page.TextLeading;
+    }
 
     public static uint HPDF_Page_SetTextRise(PdfPage page, double value)
     {
@@ -899,11 +1155,20 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_Page_SetTextRaise(PdfPage page, double value) => HPDF_Page_SetTextRise(page, value);
+    public static uint HPDF_Page_SetTextRaise(PdfPage page, double value)
+    {
+        return HPDF_Page_SetTextRise(page, value);
+    }
 
-    public static double HPDF_Page_GetTextRise(PdfPage page) => page.TextRise;
+    public static double HPDF_Page_GetTextRise(PdfPage page)
+    {
+        return page.TextRise;
+    }
 
-    public static double HPDF_Page_GetTextRaise(PdfPage page) => page.TextRise;
+    public static double HPDF_Page_GetTextRaise(PdfPage page)
+    {
+        return page.TextRise;
+    }
 
     public static uint HPDF_Page_MoveTo(PdfPage page, double x, double y)
     {
@@ -917,7 +1182,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfPoint HPDF_Page_GetCurrentPos(PdfPage page) => page.CurrentPosition;
+    public static PdfPoint HPDF_Page_GetCurrentPos(PdfPage page)
+    {
+        return page.CurrentPosition;
+    }
 
     public static uint HPDF_Page_GetCurrentPos2(PdfPage page, out PdfPoint pos)
     {
@@ -925,7 +1193,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfPoint HPDF_Page_GetCurrentTextPos(PdfPage page) => page.CurrentTextPosition;
+    public static PdfPoint HPDF_Page_GetCurrentTextPos(PdfPage page)
+    {
+        return page.CurrentTextPosition;
+    }
 
     public static uint HPDF_Page_GetCurrentTextPos2(PdfPage page, out PdfPoint pos)
     {
@@ -957,7 +1228,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_Page_Arc(PdfPage page, double x, double y, double radius, double startAngle, double endAngle)
+    public static uint HPDF_Page_Arc(PdfPage page, double x, double y, double radius, double startAngle,
+        double endAngle)
     {
         page.Arc(x, y, radius, startAngle, endAngle);
         return HaruStatus.OK;
@@ -1065,7 +1337,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetLineWidth(PdfPage page) => page.LineWidth;
+    public static double HPDF_Page_GetLineWidth(PdfPage page)
+    {
+        return page.LineWidth;
+    }
 
     public static uint HPDF_Page_SetLineCap(PdfPage page, PdfLineCap cap)
     {
@@ -1073,7 +1348,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfLineCap HPDF_Page_GetLineCap(PdfPage page) => page.LineCap;
+    public static PdfLineCap HPDF_Page_GetLineCap(PdfPage page)
+    {
+        return page.LineCap;
+    }
 
     public static uint HPDF_Page_SetLineJoin(PdfPage page, PdfLineJoin join)
     {
@@ -1081,7 +1359,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfLineJoin HPDF_Page_GetLineJoin(PdfPage page) => page.LineJoin;
+    public static PdfLineJoin HPDF_Page_GetLineJoin(PdfPage page)
+    {
+        return page.LineJoin;
+    }
 
     public static uint HPDF_Page_SetMiterLimit(PdfPage page, double limit)
     {
@@ -1089,21 +1370,26 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetMiterLimit(PdfPage page) => page.MiterLimit;
+    public static double HPDF_Page_GetMiterLimit(PdfPage page)
+    {
+        return page.MiterLimit;
+    }
 
     public static uint HPDF_Page_SetDash(PdfPage page, IReadOnlyList<double>? pattern, uint count, double phase)
     {
         if (pattern is null)
         {
             if (count != 0)
-                throw page.Owner.CreateException(HaruStatus.InvalidParameter, "Dash pattern cannot be null when count is non-zero.");
+                throw page.Owner.CreateException(HaruStatus.InvalidParameter,
+                    "Dash pattern cannot be null when count is non-zero.");
 
             page.SetDash(Array.Empty<double>(), phase);
             return HaruStatus.OK;
         }
 
         if (count > pattern.Count || count > int.MaxValue)
-            throw page.Owner.CreateException(HaruStatus.InvalidParameter, "Dash pattern count is outside the supplied array.");
+            throw page.Owner.CreateException(HaruStatus.InvalidParameter,
+                "Dash pattern count is outside the supplied array.");
 
         page.SetDash(pattern.Take((int)count).ToArray(), phase);
         return HaruStatus.OK;
@@ -1115,7 +1401,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfDashMode HPDF_Page_GetDash(PdfPage page) => page.Dash;
+    public static PdfDashMode HPDF_Page_GetDash(PdfPage page)
+    {
+        return page.Dash;
+    }
 
     public static uint HPDF_Page_SetFlat(PdfPage page, double flatness)
     {
@@ -1123,7 +1412,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetFlat(PdfPage page) => page.Flatness;
+    public static double HPDF_Page_GetFlat(PdfPage page)
+    {
+        return page.Flatness;
+    }
 
     public static uint HPDF_Page_SetRGBFill(PdfPage page, double r, double g, double b)
     {
@@ -1131,7 +1423,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfRgbColor HPDF_Page_GetRGBFill(PdfPage page) => page.RgbFill;
+    public static PdfRgbColor HPDF_Page_GetRGBFill(PdfPage page)
+    {
+        return page.RgbFill;
+    }
 
     public static uint HPDF_Page_SetRGBStroke(PdfPage page, double r, double g, double b)
     {
@@ -1139,7 +1434,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfRgbColor HPDF_Page_GetRGBStroke(PdfPage page) => page.RgbStroke;
+    public static PdfRgbColor HPDF_Page_GetRGBStroke(PdfPage page)
+    {
+        return page.RgbStroke;
+    }
 
     public static uint HPDF_Page_SetGrayFill(PdfPage page, double gray)
     {
@@ -1147,7 +1445,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetGrayFill(PdfPage page) => page.GrayFill;
+    public static double HPDF_Page_GetGrayFill(PdfPage page)
+    {
+        return page.GrayFill;
+    }
 
     public static uint HPDF_Page_SetGrayStroke(PdfPage page, double gray)
     {
@@ -1155,7 +1456,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static double HPDF_Page_GetGrayStroke(PdfPage page) => page.GrayStroke;
+    public static double HPDF_Page_GetGrayStroke(PdfPage page)
+    {
+        return page.GrayStroke;
+    }
 
     public static uint HPDF_Page_SetCMYKFill(PdfPage page, double c, double m, double y, double k)
     {
@@ -1163,7 +1467,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfCmykColor HPDF_Page_GetCMYKFill(PdfPage page) => page.CmykFill;
+    public static PdfCmykColor HPDF_Page_GetCMYKFill(PdfPage page)
+    {
+        return page.CmykFill;
+    }
 
     public static uint HPDF_Page_SetCMYKStroke(PdfPage page, double c, double m, double y, double k)
     {
@@ -1171,15 +1478,30 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfCmykColor HPDF_Page_GetCMYKStroke(PdfPage page) => page.CmykStroke;
+    public static PdfCmykColor HPDF_Page_GetCMYKStroke(PdfPage page)
+    {
+        return page.CmykStroke;
+    }
 
-    public static PdfColorSpace HPDF_Page_GetStrokingColorSpace(PdfPage page) => page.StrokingColorSpace;
+    public static PdfColorSpace HPDF_Page_GetStrokingColorSpace(PdfPage page)
+    {
+        return page.StrokingColorSpace;
+    }
 
-    public static PdfColorSpace HPDF_Page_GetFillingColorSpace(PdfPage page) => page.FillingColorSpace;
+    public static PdfColorSpace HPDF_Page_GetFillingColorSpace(PdfPage page)
+    {
+        return page.FillingColorSpace;
+    }
 
-    public static PdfTransMatrix HPDF_Page_GetTextMatrix(PdfPage page) => page.TextMatrix;
+    public static PdfTransMatrix HPDF_Page_GetTextMatrix(PdfPage page)
+    {
+        return page.TextMatrix;
+    }
 
-    public static uint HPDF_Page_GetGStateDepth(PdfPage page) => page.GStateDepth;
+    public static uint HPDF_Page_GetGStateDepth(PdfPage page)
+    {
+        return page.GStateDepth;
+    }
 
     public static uint HPDF_Page_Concat(PdfPage page, double a, double b, double c, double d, double x, double y)
     {
@@ -1187,17 +1509,23 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_Page_DrawImage(PdfPage page, PdfImage image, double x, double y, double width, double height)
+    public static uint HPDF_Page_DrawImage(PdfPage page, PdfImage image, double x, double y, double width,
+        double height)
     {
         page.DrawImage(image, x, y, width, height);
         return HaruStatus.OK;
     }
 
-    public static PdfXObject HPDF_Page_CreateXObjectFromImage(PdfDocument pdf, PdfPage page, PdfRect rect, PdfImage image, bool zoom) =>
-        pdf.CreateXObjectFromImage(page, rect, image, zoom);
+    public static PdfXObject HPDF_Page_CreateXObjectFromImage(PdfDocument pdf, PdfPage page, PdfRect rect,
+        PdfImage image, bool zoom)
+    {
+        return pdf.CreateXObjectFromImage(page, rect, image, zoom);
+    }
 
-    public static PdfXObject HPDF_Page_CreateXObjectAsWhiteRect(PdfDocument pdf, PdfPage page, PdfRect rect) =>
-        pdf.CreateXObjectAsWhiteRect(page, rect);
+    public static PdfXObject HPDF_Page_CreateXObjectAsWhiteRect(PdfDocument pdf, PdfPage page, PdfRect rect)
+    {
+        return pdf.CreateXObjectAsWhiteRect(page, rect);
+    }
 
     public static uint HPDF_Page_ExecuteXObject(PdfPage page, PdfImage image)
     {
@@ -1211,11 +1539,20 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static string HPDF_Page_GetXObjectName(PdfPage page, PdfImage image) => page.GetXObjectName(image);
+    public static string HPDF_Page_GetXObjectName(PdfPage page, PdfImage image)
+    {
+        return page.GetXObjectName(image);
+    }
 
-    public static string HPDF_Page_GetXObjectName(PdfPage page, PdfXObject xObject) => page.GetXObjectName(xObject);
+    public static string HPDF_Page_GetXObjectName(PdfPage page, PdfXObject xObject)
+    {
+        return page.GetXObjectName(xObject);
+    }
 
-    public static PdfContentStream HPDF_Page_New_Content_Stream(PdfPage page) => page.NewContentStream();
+    public static PdfContentStream HPDF_Page_New_Content_Stream(PdfPage page)
+    {
+        return page.NewContentStream();
+    }
 
     public static uint HPDF_Page_New_Content_Stream(PdfPage page, out PdfContentStream newStream)
     {
@@ -1229,7 +1566,10 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfDestination HPDF_Page_CreateDestination(PdfPage page) => page.CreateDestination();
+    public static PdfDestination HPDF_Page_CreateDestination(PdfPage page)
+    {
+        return page.CreateDestination();
+    }
 
     public static uint HPDF_Destination_SetXYZ(PdfDestination destination, double left, double top, double zoom)
     {
@@ -1255,7 +1595,8 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_Destination_SetFitR(PdfDestination destination, double left, double bottom, double right, double top)
+    public static uint HPDF_Destination_SetFitR(PdfDestination destination, double left, double bottom, double right,
+        double top)
     {
         destination.SetFitR(left, bottom, right, top);
         return HaruStatus.OK;
@@ -1279,71 +1620,126 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static PdfAnnotation HPDF_Page_CreateLinkAnnot(PdfPage page, PdfRect rect, PdfDestination destination) =>
-        page.CreateLinkAnnotation(rect, destination);
+    public static PdfAnnotation HPDF_Page_CreateLinkAnnot(PdfPage page, PdfRect rect, PdfDestination destination)
+    {
+        return page.CreateLinkAnnotation(rect, destination);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateURILinkAnnot(PdfPage page, PdfRect rect, string uri) =>
-        page.CreateURILinkAnnotation(rect, uri);
+    public static PdfAnnotation HPDF_Page_CreateURILinkAnnot(PdfPage page, PdfRect rect, string uri)
+    {
+        return page.CreateURILinkAnnotation(rect, uri);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateTextAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateTextAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateTextAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateTextAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateFreeTextAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateFreeTextAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateFreeTextAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateFreeTextAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateLineAnnot(PdfPage page, PdfRect rect, string text, object? encoder, PdfPoint startPoint, PdfPoint endPoint) =>
-        page.CreateLineAnnotation(rect, text, startPoint, endPoint);
+    public static PdfAnnotation HPDF_Page_CreateLineAnnot(PdfPage page, PdfRect rect, string text, object? encoder,
+        PdfPoint startPoint, PdfPoint endPoint)
+    {
+        return page.CreateLineAnnotation(rect, text, startPoint, endPoint);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateWidgetAnnot(PdfPage page, PdfRect rect) =>
-        page.CreateWidgetAnnotation(rect);
+    public static PdfAnnotation HPDF_Page_CreateWidgetAnnot(PdfPage page, PdfRect rect)
+    {
+        return page.CreateWidgetAnnotation(rect);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateWidgetAnnot_WhiteOnlyWhilePrint(PdfDocument pdf, PdfPage page, PdfRect rect) =>
-        page.CreateWidgetAnnotationWhiteOnlyWhilePrint(rect);
+    public static PdfAnnotation HPDF_Page_CreateWidgetAnnot_WhiteOnlyWhilePrint(PdfDocument pdf, PdfPage page,
+        PdfRect rect)
+    {
+        return page.CreateWidgetAnnotationWhiteOnlyWhilePrint(rect);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateSquareAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateSquareAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateSquareAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateSquareAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateCircleAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateCircleAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateCircleAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateCircleAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateHighlightAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateHighlightAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateHighlightAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateHighlightAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateTextMarkupAnnot(PdfPage page, PdfRect rect, string text, object? encoder, PdfAnnotType subType) =>
-        page.CreateTextMarkupAnnotation(rect, text, subType);
+    public static PdfAnnotation HPDF_Page_CreateTextMarkupAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder, PdfAnnotType subType)
+    {
+        return page.CreateTextMarkupAnnotation(rect, text, subType);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateUnderlineAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateUnderlineAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateUnderlineAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateUnderlineAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateSquigglyAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateSquigglyAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateSquigglyAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateSquigglyAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateStrikeOutAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateStrikeOutAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateStrikeOutAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateStrikeOutAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreatePopupAnnot(PdfPage page, PdfRect rect, PdfAnnotation parent) =>
-        page.CreatePopupAnnotation(rect, parent);
+    public static PdfAnnotation HPDF_Page_CreatePopupAnnot(PdfPage page, PdfRect rect, PdfAnnotation parent)
+    {
+        return page.CreatePopupAnnotation(rect, parent);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateStampAnnot(PdfPage page, PdfRect rect, string name, string text, object? encoder = null) =>
-        page.CreateStampAnnotation(rect, name, text);
+    public static PdfAnnotation HPDF_Page_CreateStampAnnot(PdfPage page, PdfRect rect, string name, string text,
+        object? encoder = null)
+    {
+        return page.CreateStampAnnotation(rect, name, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_CreateProjectionAnnot(PdfPage page, PdfRect rect, string text, object? encoder = null) =>
-        page.CreateProjectionAnnotation(rect, text);
+    public static PdfAnnotation HPDF_Page_CreateProjectionAnnot(PdfPage page, PdfRect rect, string text,
+        object? encoder = null)
+    {
+        return page.CreateProjectionAnnotation(rect, text);
+    }
 
-    public static PdfAnnotation HPDF_Page_Create3DAnnot(PdfPage page, PdfRect rect, PdfU3D u3d) =>
-        page.Create3DAnnotation(rect, u3d);
+    public static PdfAnnotation HPDF_Page_Create3DAnnot(PdfPage page, PdfRect rect, PdfU3D u3d)
+    {
+        return page.Create3DAnnotation(rect, u3d);
+    }
 
-    public static PdfExData HPDF_Page_Create3DAnnotExData(PdfPage page) => page.Create3DAnnotExData();
+    public static PdfExData HPDF_Page_Create3DAnnotExData(PdfPage page)
+    {
+        return page.Create3DAnnotExData();
+    }
 
-    public static uint HPDF_Annotation_SetBorderStyle(PdfAnnotation annotation, PdfAnnotBorderStyle style, double width, ushort dashOn = 0, ushort dashOff = 0, ushort dashPhase = 0)
+    public static uint HPDF_Annotation_SetBorderStyle(PdfAnnotation annotation, PdfAnnotBorderStyle style, double width,
+        ushort dashOn = 0, ushort dashOff = 0, ushort dashPhase = 0)
     {
         annotation.SetBorderStyle(style, width, dashOn, dashOff, dashPhase);
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_LinkAnnot_SetBorderStyle(PdfAnnotation annotation, double width, ushort dashOn, ushort dashOff)
+    public static uint HPDF_LinkAnnot_SetBorderStyle(PdfAnnotation annotation, double width, ushort dashOn,
+        ushort dashOff)
     {
-        annotation.SetBorderStyle(dashOn == 0 && dashOff == 0 ? PdfAnnotBorderStyle.Solid : PdfAnnotBorderStyle.Dashed, width, dashOn, dashOff);
+        annotation.SetBorderStyle(dashOn == 0 && dashOff == 0 ? PdfAnnotBorderStyle.Solid : PdfAnnotBorderStyle.Dashed,
+            width, dashOn, dashOff);
         return HaruStatus.OK;
     }
 
@@ -1473,25 +1869,29 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_TextMarkupAnnot_SetQuadPoints(PdfAnnotation annotation, PdfPoint leftBottom, PdfPoint rightBottom, PdfPoint rightTop, PdfPoint leftTop)
+    public static uint HPDF_TextMarkupAnnot_SetQuadPoints(PdfAnnotation annotation, PdfPoint leftBottom,
+        PdfPoint rightBottom, PdfPoint rightTop, PdfPoint leftTop)
     {
         annotation.SetQuadPoints(leftBottom, rightBottom, rightTop, leftTop);
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_FreeTextAnnot_SetLineEndingStyle(PdfAnnotation annotation, PdfAnnotLineEndingStyle startStyle, PdfAnnotLineEndingStyle endStyle)
+    public static uint HPDF_FreeTextAnnot_SetLineEndingStyle(PdfAnnotation annotation,
+        PdfAnnotLineEndingStyle startStyle, PdfAnnotLineEndingStyle endStyle)
     {
         annotation.SetLineEndingStyle(startStyle, endStyle);
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_FreeTextAnnot_Set2PointCalloutLine(PdfAnnotation annotation, PdfPoint startPoint, PdfPoint endPoint)
+    public static uint HPDF_FreeTextAnnot_Set2PointCalloutLine(PdfAnnotation annotation, PdfPoint startPoint,
+        PdfPoint endPoint)
     {
         annotation.SetCalloutLine(startPoint, endPoint);
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_FreeTextAnnot_Set3PointCalloutLine(PdfAnnotation annotation, PdfPoint startPoint, PdfPoint kneePoint, PdfPoint endPoint)
+    public static uint HPDF_FreeTextAnnot_Set3PointCalloutLine(PdfAnnotation annotation, PdfPoint startPoint,
+        PdfPoint kneePoint, PdfPoint endPoint)
     {
         annotation.SetCalloutLine(startPoint, kneePoint, endPoint);
         return HaruStatus.OK;
@@ -1503,19 +1903,22 @@ public static class HPdf
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_LineAnnot_SetPosition(PdfAnnotation annotation, PdfPoint startPoint, PdfAnnotLineEndingStyle startStyle, PdfPoint endPoint, PdfAnnotLineEndingStyle endStyle)
+    public static uint HPDF_LineAnnot_SetPosition(PdfAnnotation annotation, PdfPoint startPoint,
+        PdfAnnotLineEndingStyle startStyle, PdfPoint endPoint, PdfAnnotLineEndingStyle endStyle)
     {
         annotation.SetLinePosition(startPoint, startStyle, endPoint, endStyle);
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_LineAnnot_SetLeader(PdfAnnotation annotation, int leaderLength, int leaderExtensionLength, int leaderOffsetLength)
+    public static uint HPDF_LineAnnot_SetLeader(PdfAnnotation annotation, int leaderLength, int leaderExtensionLength,
+        int leaderOffsetLength)
     {
         annotation.SetLineLeader(leaderLength, leaderExtensionLength, leaderOffsetLength);
         return HaruStatus.OK;
     }
 
-    public static uint HPDF_LineAnnot_SetCaption(PdfAnnotation annotation, bool showCaption, PdfLineAnnotCapPosition position, int horizontalOffset, int verticalOffset)
+    public static uint HPDF_LineAnnot_SetCaption(PdfAnnotation annotation, bool showCaption,
+        PdfLineAnnotCapPosition position, int horizontalOffset, int verticalOffset)
     {
         annotation.SetLineCaption(showCaption, position, horizontalOffset, verticalOffset);
         return HaruStatus.OK;

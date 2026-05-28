@@ -4,10 +4,11 @@ namespace LibHaru.Internal;
 
 internal sealed class PdfEncoding
 {
-    private readonly Dictionary<char, byte> _reverseMap;
     private readonly char[] _codeToUnicode;
+    private readonly Dictionary<char, byte> _reverseMap;
 
-    private PdfEncoding(string name, char[] codeToUnicode, bool isComposite = false, string? pdfName = null, bool preservesInputBytes = false)
+    private PdfEncoding(string name, char[] codeToUnicode, bool isComposite = false, string? pdfName = null,
+        bool preservesInputBytes = false)
     {
         Name = name;
         PdfName = pdfName ?? name;
@@ -52,28 +53,28 @@ internal sealed class PdfEncoding
 
         return name switch
         {
-            "Identity-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: "Identity-H"),
-            "Identity-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: "Identity-V"),
-            "UTF-8" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: "Identity-H"),
-            "UTF8" => new PdfEncoding("UTF-8", IdentityMap(), isComposite: true, pdfName: "Identity-H"),
-            "UTF-16BE" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: "Identity-H"),
-            "90ms-RKSJ-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "90ms-RKSJ-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "90msp-RKSJ-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "90msp-RKSJ-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "EUC-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "EUC-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "GB-EUC-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "GB-EUC-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "GBK-EUC-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "GBK-EUC-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "ETen-B5-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "ETen-B5-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "KSCms-UHC-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "KSCms-UHC-HW-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "KSCms-UHC-HW-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "KSC-EUC-H" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
-            "KSC-EUC-V" => new PdfEncoding(name, IdentityMap(), isComposite: true, pdfName: name, preservesInputBytes: true),
+            "Identity-H" => new PdfEncoding(name, IdentityMap(), true, "Identity-H"),
+            "Identity-V" => new PdfEncoding(name, IdentityMap(), true, "Identity-V"),
+            "UTF-8" => new PdfEncoding(name, IdentityMap(), true, "Identity-H"),
+            "UTF8" => new PdfEncoding("UTF-8", IdentityMap(), true, "Identity-H"),
+            "UTF-16BE" => new PdfEncoding(name, IdentityMap(), true, "Identity-H"),
+            "90ms-RKSJ-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "90ms-RKSJ-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "90msp-RKSJ-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "90msp-RKSJ-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "EUC-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "EUC-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "GB-EUC-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "GB-EUC-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "GBK-EUC-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "GBK-EUC-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "ETen-B5-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "ETen-B5-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "KSCms-UHC-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "KSCms-UHC-HW-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "KSCms-UHC-HW-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "KSC-EUC-H" => new PdfEncoding(name, IdentityMap(), true, name, true),
+            "KSC-EUC-V" => new PdfEncoding(name, IdentityMap(), true, name, true),
             _ => throw CreateException(error, HaruStatus.InvalidEncodingName, $"Unsupported encoding: {name}.")
         };
     }
@@ -96,12 +97,15 @@ internal sealed class PdfEncoding
         return (byte)'?';
     }
 
-    internal int ToUnicode(byte code) => _codeToUnicode[code];
+    internal int ToUnicode(byte code)
+    {
+        return _codeToUnicode[code];
+    }
 
     internal ushort GetUnicode(ushort code)
     {
         if (!IsComposite)
-            return code <= byte.MaxValue ? (ushort)_codeToUnicode[code] : (ushort)0;
+            return code <= byte.MaxValue ? _codeToUnicode[code] : (ushort)0;
 
         if (PreservesInputBytes)
             return CjkCMapData.ToUnicode(Name, code);
@@ -109,7 +113,10 @@ internal sealed class PdfEncoding
         return code;
     }
 
-    internal ushort ToCid(ushort code) => PreservesInputBytes ? CjkCMapData.ToCid(Name, code) : code;
+    internal ushort ToCid(ushort code)
+    {
+        return PreservesInputBytes ? CjkCMapData.ToCid(Name, code) : code;
+    }
 
     internal PdfByteType GetByteType(string text, uint index)
     {
@@ -208,15 +215,11 @@ internal sealed class PdfEncoding
         if (Name.StartsWith("KSCms-UHC", StringComparison.Ordinal)
             || Name.StartsWith("GBK-EUC", StringComparison.Ordinal)
             || Name.StartsWith("ETen-B5", StringComparison.Ordinal))
-        {
             return value is >= 0x81 and <= 0xFE;
-        }
 
         if (Name.StartsWith("KSC-EUC", StringComparison.Ordinal)
             || Name.StartsWith("GB-EUC", StringComparison.Ordinal))
-        {
             return value is >= 0xA1 and <= 0xFE;
-        }
 
         return false;
     }
@@ -237,9 +240,7 @@ internal sealed class PdfEncoding
 
         if (Name.StartsWith("GBK-EUC", StringComparison.Ordinal)
             || Name.StartsWith("ETen-B5", StringComparison.Ordinal))
-        {
             return value is >= 0x40 and <= 0xFE;
-        }
 
         return false;
     }

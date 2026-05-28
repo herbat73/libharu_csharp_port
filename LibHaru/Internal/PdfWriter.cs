@@ -7,8 +7,8 @@ internal sealed class PdfWriter
 {
     private static readonly Encoding Ascii = Encoding.ASCII;
     private readonly Stream _stream;
-    private int? _currentObjectNumber;
     private int _currentGenerationNumber;
+    private int? _currentObjectNumber;
     private int _encryptionSuppressionDepth;
 
     internal PdfWriter(Stream stream)

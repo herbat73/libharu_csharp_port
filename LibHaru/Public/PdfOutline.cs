@@ -5,7 +5,6 @@ namespace LibHaru;
 public sealed class PdfOutline
 {
     private readonly PdfDictionary _dictionary;
-    private bool _opened;
 
     internal PdfOutline(PdfDocument owner, PdfOutline? parent, string title, PdfIndirectObject outlineObject)
     {
@@ -27,14 +26,15 @@ public sealed class PdfOutline
 
     public string Title { get; }
 
-    public bool Opened => _opened;
+    public bool Opened { get; private set; }
 
     public void SetDestination(PdfDestination destination)
     {
         ValidateOrThrow();
 
         if (destination is null || !ReferenceEquals(destination.Owner, Owner))
-            throw Owner.CreateException(HaruStatus.InvalidDestination, "Outline destination does not belong to this document.");
+            throw Owner.CreateException(HaruStatus.InvalidDestination,
+                "Outline destination does not belong to this document.");
 
         destination.ValidateOrThrow();
         _dictionary.Set("Dest", destination.DestinationObject.Reference);
@@ -43,7 +43,7 @@ public sealed class PdfOutline
     public void SetOpened(bool opened)
     {
         ValidateOrThrow();
-        _opened = opened;
+        Opened = opened;
     }
 
     internal int Prepare(PdfIndirectReference parentReference, PdfOutline? previous, PdfOutline? next)
@@ -81,7 +81,7 @@ public sealed class PdfOutline
             descendantCount += Children[i].Prepare(OutlineObject.Reference, prev, nextChild);
         }
 
-        _dictionary.Set("Count", new PdfInteger(_opened ? descendantCount : -descendantCount));
+        _dictionary.Set("Count", new PdfInteger(Opened ? descendantCount : -descendantCount));
         return descendantCount + 1;
     }
 

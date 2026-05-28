@@ -31,26 +31,32 @@ public static class PdfStructuralReader
 
         var startXref = LastStartXref(text, name);
         Require(startXref > 0 && startXref < text.Length, $"{name}: startxref offset is outside the PDF.");
-        Require(text[startXref..].StartsWith("xref", StringComparison.Ordinal), $"{name}: startxref does not point at xref.");
+        Require(text[startXref..].StartsWith("xref", StringComparison.Ordinal),
+            $"{name}: startxref does not point at xref.");
 
         var xref = ReadXref(text, startXref, name);
-        Require(xref.Entries.TryGetValue(0, out var freeEntry) && !freeEntry.InUse, $"{name}: xref object 0 must be free.");
+        Require(xref.Entries.TryGetValue(0, out var freeEntry) && !freeEntry.InUse,
+            $"{name}: xref object 0 must be free.");
         Require(xref.TrailerSize == xref.Entries.Count, $"{name}: trailer Size does not match xref entry count.");
-        Require(xref.RootObject > 0 && IsInUse(xref, xref.RootObject), $"{name}: trailer Root does not reference an in-use object.");
+        Require(xref.RootObject > 0 && IsInUse(xref, xref.RootObject),
+            $"{name}: trailer Root does not reference an in-use object.");
 
         foreach (var (objectNumber, entry) in xref.Entries)
         {
             if (!entry.InUse)
                 continue;
 
-            Require(entry.Offset > 0 && entry.Offset < text.Length, $"{name}: object {objectNumber} offset is outside the PDF.");
+            Require(entry.Offset > 0 && entry.Offset < text.Length,
+                $"{name}: object {objectNumber} offset is outside the PDF.");
             Require(
-                text[(int)entry.Offset..].StartsWith($"{objectNumber} {entry.Generation} obj", StringComparison.Ordinal),
+                text[(int)entry.Offset..]
+                    .StartsWith($"{objectNumber} {entry.Generation} obj", StringComparison.Ordinal),
                 $"{name}: xref offset for object {objectNumber} does not point at that object.");
         }
 
         foreach (var reference in ReadIndirectReferences(text))
-            Require(IsInUse(xref, reference.ObjectNumber), $"{name}: unresolved indirect reference {reference.ObjectNumber} {reference.Generation} R.");
+            Require(IsInUse(xref, reference.ObjectNumber),
+                $"{name}: unresolved indirect reference {reference.ObjectNumber} {reference.Generation} R.");
     }
 
     private static int LastStartXref(string text, string name)
@@ -127,11 +133,9 @@ public static class PdfStructuralReader
             RegexOptions.Singleline);
 
         foreach (Match match in Regex.Matches(withoutStreams, @"(?<!\d)(\d+)\s+(\d+)\s+R\b"))
-        {
             yield return (
                 int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
                 int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture));
-        }
     }
 
     private static int RequiredInt(string text, string pattern, string message)
@@ -141,8 +145,10 @@ public static class PdfStructuralReader
         return int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
     }
 
-    private static bool IsInUse(XrefTable xref, int objectNumber) =>
-        xref.Entries.TryGetValue(objectNumber, out var entry) && entry.InUse;
+    private static bool IsInUse(XrefTable xref, int objectNumber)
+    {
+        return xref.Entries.TryGetValue(objectNumber, out var entry) && entry.InUse;
+    }
 
     private static void Require(bool condition, string message)
     {

@@ -328,7 +328,7 @@ public enum PdfAFRelationship : uint
     Unspecified
 }
 
-public enum PdfPdfAType : int
+public enum PdfPdfAType
 {
     NonPdfA = -1,
     PdfA1A = 0,
@@ -411,13 +411,13 @@ public readonly record struct PdfCmykColor(double C, double M, double Y, double 
 
 public readonly record struct PdfDashMode
 {
+    public static readonly PdfDashMode Solid = new(Array.Empty<double>(), 0);
+
     public PdfDashMode(IReadOnlyList<double>? pattern, double phase)
     {
         Pattern = (pattern ?? Array.Empty<double>()).ToArray();
         Phase = phase;
     }
-
-    public static readonly PdfDashMode Solid = new(Array.Empty<double>(), 0);
 
     public IReadOnlyList<double> Pattern { get; }
 

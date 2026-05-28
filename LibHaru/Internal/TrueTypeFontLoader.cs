@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace LibHaru.Internal;
@@ -53,22 +54,26 @@ internal static class TrueTypeFontLoader
 
         var advances = ReadAdvanceWidths(data, hmtx.Offset, numGlyphs, numHMetrics);
         var cmap = ReadCMap(data, cmapTable);
-        var cff = isOpenTypeCff ? ReadCffMetadata(data, Required(tables, "CFF ", HaruStatus.TtfMissingTable), numGlyphs) : null;
+        var cff = isOpenTypeCff
+            ? ReadCffMetadata(data, Required(tables, "CFF ", HaruStatus.TtfMissingTable), numGlyphs)
+            : null;
         var names = ReadNames(data, name);
         var baseFont = names.PostScriptName ?? BuildBaseFontName(names.FamilyName, names.SubfamilyName);
         if (string.IsNullOrWhiteSpace(baseFont))
-            throw new HaruException(HaruStatus.TtfInvalidFormat, "TrueType name table does not contain a usable font name.");
+            throw new HaruException(HaruStatus.TtfInvalidFormat,
+                "TrueType name table does not contain a usable font name.");
 
         var os2Version = ReadUInt16(data, os2.Offset);
         var averageWidth = Scale(ReadInt16(data, os2.Offset + 2), unitsPerEm);
         var fsType = ReadUInt16(data, os2.Offset + 8);
         if (embedding && (fsType & (0x0002 | 0x0100 | 0x0200)) != 0)
-            throw new HaruException(HaruStatus.TtfCannotEmbeddingFont, "TrueType font embedding is restricted by the OS/2 fsType flags.");
+            throw new HaruException(HaruStatus.TtfCannotEmbeddingFont,
+                "TrueType font embedding is restricted by the OS/2 fsType flags.");
 
         var familyClass = ReadInt16(data, os2.Offset + 30);
         var flags = FontStdCharset;
         var classId = (familyClass >> 8) & 0xFF;
-        if ((classId is > 0 and < 6) || classId == 7)
+        if (classId is > 0 and < 6 || classId == 7)
             flags |= FontSerif;
         else if (classId == 10)
             flags |= FontScript;
@@ -98,9 +103,15 @@ internal static class TrueTypeFontLoader
             return WidthForGlyph(gid, advances, unitsPerEm);
         }
 
-        int GlyphId(int unicode) => cmap.GlyphId(unicode);
+        int GlyphId(int unicode)
+        {
+            return cmap.GlyphId(unicode);
+        }
 
-        int GlyphWidth(int glyphId) => WidthForGlyph(glyphId, advances, unitsPerEm);
+        int GlyphWidth(int glyphId)
+        {
+            return WidthForGlyph(glyphId, advances, unitsPerEm);
+        }
 
         var descriptor = new PdfFontDescriptor(
             baseFont,
@@ -120,7 +131,7 @@ internal static class TrueTypeFontLoader
         var fontFile = CreateFontFile(data, faceOffset, tables, embedding, isOpenTypeCff, fontFileSubsetBuilder);
 
         var kind = isOpenTypeCff
-            ? (cff is { IsCidKeyed: true } ? PdfFontProgramKind.OpenTypeCffCidKeyed : PdfFontProgramKind.OpenTypeCff)
+            ? cff is { IsCidKeyed: true } ? PdfFontProgramKind.OpenTypeCffCidKeyed : PdfFontProgramKind.OpenTypeCff
             : PdfFontProgramKind.TrueType;
         var supportsComposite = !isOpenTypeCff || cff is { IsCidKeyed: true };
 
@@ -160,8 +171,8 @@ internal static class TrueTypeFontLoader
                 fontData.Length,
                 0,
                 0,
-                subtype: "OpenType",
-                writesLengthEntries: false);
+                "OpenType",
+                false);
         }
 
         var fontFileData = fontFileSubsetBuilder?.Invoke(new PdfFontSubsetRequest([0], new Dictionary<int, int>()));
@@ -175,7 +186,8 @@ internal static class TrueTypeFontLoader
         if (ReadTag(data, 0) != "ttcf")
         {
             if (collectionIndex != 0)
-                throw new HaruException(HaruStatus.InvalidTtcIndex, "A non-zero TTC index was requested for a non-TTC font.");
+                throw new HaruException(HaruStatus.InvalidTtcIndex,
+                    "A non-zero TTC index was requested for a non-TTC font.");
 
             return 0;
         }
@@ -197,7 +209,8 @@ internal static class TrueTypeFontLoader
     private static Dictionary<string, TtfTable> ReadTableDirectory(byte[] data, int faceOffset, uint sfntVersion)
     {
         if (sfntVersion is not (SfntVersionTrueType or SfntVersionAppleTrueType or SfntVersionOpenTypeCff))
-            throw new HaruException(HaruStatus.UnsupportedFontType, "Only TrueType and OpenType/CFF SFNT fonts are supported.");
+            throw new HaruException(HaruStatus.UnsupportedFontType,
+                "Only TrueType and OpenType/CFF SFNT fonts are supported.");
 
         var tableCount = ReadUInt16(data, faceOffset + 4);
         var recordsOffset = faceOffset + 12;
@@ -346,7 +359,7 @@ internal static class TrueTypeFontLoader
                     break;
             }
 
-            return double.TryParse(builder.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            return double.TryParse(builder.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
                 ? value
                 : 0;
         }
@@ -435,6 +448,7 @@ internal static class TrueTypeFontLoader
                     gidToCid[glyphId++] = ReadUInt16(data, offset);
                     offset += 2;
                 }
+
                 break;
             case 1:
                 while (glyphId < numGlyphs)
@@ -446,6 +460,7 @@ internal static class TrueTypeFontLoader
                     for (var i = 0; i <= left && glyphId < numGlyphs; i++)
                         gidToCid[glyphId++] = first + i;
                 }
+
                 break;
             case 2:
                 while (glyphId < numGlyphs)
@@ -457,6 +472,7 @@ internal static class TrueTypeFontLoader
                     for (var i = 0; i <= left && glyphId < numGlyphs; i++)
                         gidToCid[glyphId++] = first + i;
                 }
+
                 break;
             default:
                 throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF charset format is unsupported.");
@@ -481,7 +497,6 @@ internal static class TrueTypeFontLoader
         ushort lastAdvance = 0;
 
         for (var i = 0; i < numGlyphs; i++)
-        {
             if (i < numHMetrics)
             {
                 lastAdvance = ReadUInt16(data, offset + i * 4);
@@ -491,7 +506,6 @@ internal static class TrueTypeFontLoader
             {
                 advances[i] = lastAdvance;
             }
-        }
 
         return advances;
     }
@@ -512,7 +526,7 @@ internal static class TrueTypeFontLoader
             EnsureRange(data, subtableOffset, 2);
             var format = ReadUInt16(data, subtableOffset);
 
-            CMap? cmap = format switch
+            var cmap = format switch
             {
                 0 => ReadFormat0CMap(data, subtableOffset),
                 4 => ReadFormat4CMap(data, subtableOffset),
@@ -654,7 +668,7 @@ internal static class TrueTypeFontLoader
                 ReadUInt32(data, groupOffset),
                 ReadUInt32(data, groupOffset + 4),
                 ReadUInt32(data, groupOffset + 8),
-                IsConstantGlyph: false);
+                false);
         }
 
         return new GroupedCMap(groups);
@@ -677,7 +691,7 @@ internal static class TrueTypeFontLoader
                 ReadUInt32(data, groupOffset),
                 ReadUInt32(data, groupOffset + 4),
                 ReadUInt32(data, groupOffset + 8),
-                IsConstantGlyph: true);
+                true);
         }
 
         return new GroupedCMap(groups);
@@ -739,9 +753,7 @@ internal static class TrueTypeFontLoader
 
         if (string.IsNullOrWhiteSpace(subfamilyName) ||
             subfamilyName.Equals("Regular", StringComparison.OrdinalIgnoreCase))
-        {
             return familyName;
-        }
 
         return $"{familyName},{subfamilyName.Replace(" ", string.Empty, StringComparison.Ordinal)}";
     }
@@ -773,7 +785,8 @@ internal static class TrueTypeFontLoader
 
     private static int WidthTop(CMap cmap, byte[] data, Dictionary<string, TtfTable> tables, int unitsPerEm, char ch)
     {
-        if (!tables.TryGetValue("glyf", out var glyf) || !tables.TryGetValue("loca", out var loca) || !tables.TryGetValue("head", out var head) || !tables.TryGetValue("maxp", out var maxp))
+        if (!tables.TryGetValue("glyf", out var glyf) || !tables.TryGetValue("loca", out var loca) ||
+            !tables.TryGetValue("head", out var head) || !tables.TryGetValue("maxp", out var maxp))
             return 0;
 
         var indexToLocFormat = ReadInt16(data, head.Offset + 50);
@@ -826,14 +839,13 @@ internal static class TrueTypeFontLoader
             !tables.TryGetValue("hhea", out var hhea) ||
             !tables.TryGetValue("hmtx", out var hmtx) ||
             !tables.TryGetValue("maxp", out var maxp))
-        {
             return new PdfFontSubsetData(data.ToArray(), IdentityGlyphMap(numGlyphs));
-        }
 
         var indexToLocFormat = ReadInt16(data, head.Offset + 50);
         var glyphs = CollectSubsetGlyphs(data, glyf, loca, indexToLocFormat, numGlyphs, request.GlyphIds);
         var glyphIdMap = BuildDenseGlyphMap(glyphs);
-        var (glyfData, locaData, subsetLocaFormat) = BuildSubsetGlyphTables(data, glyf, loca, indexToLocFormat, glyphIdMap);
+        var (glyfData, locaData, subsetLocaFormat) =
+            BuildSubsetGlyphTables(data, glyf, loca, indexToLocFormat, glyphIdMap);
         var glyphCount = glyphIdMap.Count;
         var tableData = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
 
@@ -1011,13 +1023,11 @@ internal static class TrueTypeFontLoader
 
         var canUseShortLoca = true;
         foreach (var offset in offsets)
-        {
             if ((offset & 1) != 0 || offset / 2 > ushort.MaxValue)
             {
                 canUseShortLoca = false;
                 break;
             }
-        }
 
         if (canUseShortLoca)
         {
@@ -1078,8 +1088,10 @@ internal static class TrueTypeFontLoader
         for (var subsetGlyphId = 0; subsetGlyphId < glyphCount; subsetGlyphId++)
         {
             var originalGlyphId = originalGlyphIds[subsetGlyphId];
-            WriteUInt16(hmtxData, subsetGlyphId * 4, ReadGlyphAdvance(data, hmtx, originalGlyphId, numGlyphs, numHMetrics));
-            WriteInt16(hmtxData, subsetGlyphId * 4 + 2, ReadGlyphLeftSideBearing(data, hmtx, originalGlyphId, numGlyphs, numHMetrics));
+            WriteUInt16(hmtxData, subsetGlyphId * 4,
+                ReadGlyphAdvance(data, hmtx, originalGlyphId, numGlyphs, numHMetrics));
+            WriteInt16(hmtxData, subsetGlyphId * 4 + 2,
+                ReadGlyphLeftSideBearing(data, hmtx, originalGlyphId, numGlyphs, numHMetrics));
         }
 
         return hmtxData;
@@ -1094,7 +1106,8 @@ internal static class TrueTypeFontLoader
         return ReadUInt16(data, hmtx.Offset + metricGlyphId * 4);
     }
 
-    private static short ReadGlyphLeftSideBearing(byte[] data, TtfTable hmtx, int glyphId, int numGlyphs, int numHMetrics)
+    private static short ReadGlyphLeftSideBearing(byte[] data, TtfTable hmtx, int glyphId, int numGlyphs,
+        int numHMetrics)
     {
         if (glyphId < 0 || glyphId >= numGlyphs)
             glyphId = 0;
@@ -1245,7 +1258,8 @@ internal static class TrueTypeFontLoader
         foreach (var (tag, bytes) in tableData)
         {
             offset = Align4(offset);
-            records.Add(new TableBuildRecord(tag, CalculateChecksum(bytes, 0, bytes.Length), offset, bytes.Length, bytes));
+            records.Add(new TableBuildRecord(tag, CalculateChecksum(bytes, 0, bytes.Length), offset, bytes.Length,
+                bytes));
             offset += Align4(bytes.Length);
         }
 
@@ -1278,13 +1292,11 @@ internal static class TrueTypeFontLoader
 
         var headOffset = -1;
         foreach (var record in records)
-        {
             if (record.Tag == "head")
             {
                 headOffset = record.Offset;
                 break;
             }
-        }
 
         if (headOffset >= 0)
         {
@@ -1309,7 +1321,10 @@ internal static class TrueTypeFontLoader
             stream.WriteByte(0);
     }
 
-    private static int Align4(int value) => (value + 3) & ~3;
+    private static int Align4(int value)
+    {
+        return (value + 3) & ~3;
+    }
 
     private static uint CalculateChecksum(byte[] data, int offset, int length)
     {
@@ -1336,7 +1351,10 @@ internal static class TrueTypeFontLoader
         return table;
     }
 
-    private static int Scale(int value, int unitsPerEm) => (int)Math.Round(value * 1000.0 / unitsPerEm);
+    private static int Scale(int value, int unitsPerEm)
+    {
+        return (int)Math.Round(value * 1000.0 / unitsPerEm);
+    }
 
     private static ushort ReadUInt16(byte[] data, int offset)
     {
@@ -1344,15 +1362,18 @@ internal static class TrueTypeFontLoader
         return (ushort)((data[offset] << 8) | data[offset + 1]);
     }
 
-    private static short ReadInt16(byte[] data, int offset) => unchecked((short)ReadUInt16(data, offset));
+    private static short ReadInt16(byte[] data, int offset)
+    {
+        return unchecked((short)ReadUInt16(data, offset));
+    }
 
     private static uint ReadUInt32(byte[] data, int offset)
     {
         EnsureRange(data, offset, 4);
         return ((uint)data[offset] << 24)
-            | ((uint)data[offset + 1] << 16)
-            | ((uint)data[offset + 2] << 8)
-            | data[offset + 3];
+               | ((uint)data[offset + 1] << 16)
+               | ((uint)data[offset + 2] << 8)
+               | data[offset + 3];
     }
 
     private static string ReadTag(byte[] data, int offset)
@@ -1367,7 +1388,10 @@ internal static class TrueTypeFontLoader
         data[offset + 1] = (byte)value;
     }
 
-    private static void WriteInt16(byte[] data, int offset, short value) => WriteUInt16(data, offset, unchecked((ushort)value));
+    private static void WriteInt16(byte[] data, int offset, short value)
+    {
+        WriteUInt16(data, offset, unchecked((ushort)value));
+    }
 
     private static void WriteUInt32(byte[] data, int offset, uint value)
     {
@@ -1406,8 +1430,10 @@ internal static class TrueTypeFontLoader
 
         internal int Supplement { get; } = supplement;
 
-        internal int CidOfGlyph(int glyphId) =>
-            glyphId >= 0 && glyphId < gidToCid.Length ? gidToCid[glyphId] : 0;
+        internal int CidOfGlyph(int glyphId)
+        {
+            return glyphId >= 0 && glyphId < gidToCid.Length ? gidToCid[glyphId] : 0;
+        }
     }
 
     private sealed record CffIndex(IReadOnlyList<CffSlice> Objects, int EndOffset);
@@ -1428,18 +1454,22 @@ internal static class TrueTypeFontLoader
             _glyphs = glyphs;
         }
 
-        internal override int GlyphId(int unicode) => unicode is >= 0 and < 256 ? _glyphs[unicode] : 0;
+        internal override int GlyphId(int unicode)
+        {
+            return unicode is >= 0 and < 256 ? _glyphs[unicode] : 0;
+        }
     }
 
     private sealed class Format4CMap : CMap
     {
         private readonly ushort[] _endCount;
-        private readonly ushort[] _startCount;
+        private readonly ushort[] _glyphArray;
         private readonly short[] _idDelta;
         private readonly ushort[] _idRangeOffset;
-        private readonly ushort[] _glyphArray;
+        private readonly ushort[] _startCount;
 
-        internal Format4CMap(ushort[] endCount, ushort[] startCount, short[] idDelta, ushort[] idRangeOffset, ushort[] glyphArray)
+        internal Format4CMap(ushort[] endCount, ushort[] startCount, short[] idDelta, ushort[] idRangeOffset,
+            ushort[] glyphArray)
         {
             _endCount = endCount;
             _startCount = startCount;
@@ -1514,7 +1544,7 @@ internal static class TrueTypeFontLoader
 
             while (low <= high)
             {
-                var mid = low + ((high - low) / 2);
+                var mid = low + (high - low) / 2;
                 var group = _groups[mid];
 
                 if (code < group.StartCharCode)

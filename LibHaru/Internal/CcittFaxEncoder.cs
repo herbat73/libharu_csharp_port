@@ -5,6 +5,7 @@ internal static class CcittFaxEncoder
     private const int Eol = 0x001;
     private static readonly FaxCode HorizontalCode = new(3, 0x1, 0);
     private static readonly FaxCode PassCode = new(4, 0x1, 0);
+
     private static readonly FaxCode[] VerticalCodes =
     [
         new(7, 0x03, 0),
@@ -15,161 +16,6 @@ internal static class CcittFaxEncoder
         new(6, 0x02, 0),
         new(7, 0x02, 0)
     ];
-
-    internal static byte[] EncodeGroup4(byte[] rows, int width, int height, int stride)
-    {
-        var writer = new BitWriter();
-        var reference = new byte[stride];
-
-        for (var y = 0; y < height; y++)
-        {
-            var offset = y * stride;
-            Encode2DRow(writer, rows, offset, reference, 0, width);
-            Buffer.BlockCopy(rows, offset, reference, 0, stride);
-        }
-
-        writer.PutBits(Eol, 12);
-        writer.PutBits(Eol, 12);
-        writer.FlushPartialByte();
-        return writer.ToArray();
-    }
-
-    private static void Encode2DRow(BitWriter writer, byte[] row, int rowOffset, byte[] reference, int referenceOffset, int width)
-    {
-        var a0 = 0;
-        var a1 = Pixel(row, rowOffset, 0, width) ? 0 : FindDiff(row, rowOffset, 0, width, false);
-        var b1 = Pixel(reference, referenceOffset, 0, width) ? 0 : FindDiff(reference, referenceOffset, 0, width, false);
-
-        while (true)
-        {
-            var b2 = FindDiff2(reference, referenceOffset, b1, width, Pixel(reference, referenceOffset, b1, width));
-
-            if (b2 >= a1)
-            {
-                var delta = b1 - a1;
-                if (delta is < -3 or > 3)
-                {
-                    var a2 = FindDiff2(row, rowOffset, a1, width, Pixel(row, rowOffset, a1, width));
-                    PutCode(writer, HorizontalCode);
-
-                    if (a0 + a1 == 0 || !Pixel(row, rowOffset, a0, width))
-                    {
-                        PutSpan(writer, a1 - a0, WhiteCodes);
-                        PutSpan(writer, a2 - a1, BlackCodes);
-                    }
-                    else
-                    {
-                        PutSpan(writer, a1 - a0, BlackCodes);
-                        PutSpan(writer, a2 - a1, WhiteCodes);
-                    }
-
-                    a0 = a2;
-                }
-                else
-                {
-                    PutCode(writer, VerticalCodes[delta + 3]);
-                    a0 = a1;
-                }
-            }
-            else
-            {
-                PutCode(writer, PassCode);
-                a0 = b2;
-            }
-
-            if (a0 >= width)
-                break;
-
-            var rowColor = Pixel(row, rowOffset, a0, width);
-            a1 = FindDiff(row, rowOffset, a0, width, rowColor);
-            b1 = FindDiff(reference, referenceOffset, a0, width, !rowColor);
-            b1 = FindDiff(reference, referenceOffset, b1, width, rowColor);
-        }
-    }
-
-    private static bool Pixel(byte[] data, int offset, int index, int width)
-    {
-        if (index < 0 || index >= width)
-            return false;
-
-        return ((data[offset + (index >> 3)] >> (7 - (index & 7))) & 1) != 0;
-    }
-
-    private static int FindDiff(byte[] data, int offset, int start, int end, bool color)
-    {
-        for (var index = start; index < end; index++)
-        {
-            if (Pixel(data, offset, index, end) != color)
-                return index;
-        }
-
-        return end;
-    }
-
-    private static int FindDiff2(byte[] data, int offset, int start, int end, bool color) =>
-        start < end ? FindDiff(data, offset, start, end, color) : end;
-
-    private static void PutCode(BitWriter writer, FaxCode code) => writer.PutBits(code.Code, code.Length);
-
-    private static void PutSpan(BitWriter writer, int span, FaxCode[] table)
-    {
-        while (span >= 2624)
-        {
-            var code = table[103];
-            writer.PutBits(code.Code, code.Length);
-            span -= code.RunLength;
-        }
-
-        if (span >= 64)
-        {
-            var code = table[63 + (span >> 6)];
-            writer.PutBits(code.Code, code.Length);
-            span -= code.RunLength;
-        }
-
-        var terminal = table[span];
-        writer.PutBits(terminal.Code, terminal.Length);
-    }
-
-    private sealed class BitWriter
-    {
-        private readonly MemoryStream _stream = new();
-        private int _current;
-        private int _remaining = 8;
-
-        internal void PutBits(int bits, int length)
-        {
-            while (length > _remaining)
-            {
-                _current |= bits >> (length - _remaining);
-                length -= _remaining;
-                FlushByte();
-            }
-
-            _current |= (bits & ((1 << length) - 1)) << (_remaining - length);
-            _remaining -= length;
-
-            if (_remaining == 0)
-                FlushByte();
-        }
-
-        internal void FlushPartialByte()
-        {
-            if (_remaining != 8)
-                FlushByte();
-        }
-
-        internal byte[] ToArray() => _stream.ToArray();
-
-        private void FlushByte()
-        {
-            _stream.WriteByte((byte)_current);
-            _current = 0;
-            _remaining = 8;
-        }
-    }
-
-    private readonly record struct FaxCode(int Length, int Code, int RunLength);
 
     private static readonly FaxCode[] WhiteCodes =
     [
@@ -386,4 +232,168 @@ internal static class CcittFaxEncoder
         new(12, 0x1E, 2496),
         new(12, 0x1F, 2560)
     ];
+
+    internal static byte[] EncodeGroup4(byte[] rows, int width, int height, int stride)
+    {
+        var writer = new BitWriter();
+        var reference = new byte[stride];
+
+        for (var y = 0; y < height; y++)
+        {
+            var offset = y * stride;
+            Encode2DRow(writer, rows, offset, reference, 0, width);
+            Buffer.BlockCopy(rows, offset, reference, 0, stride);
+        }
+
+        writer.PutBits(Eol, 12);
+        writer.PutBits(Eol, 12);
+        writer.FlushPartialByte();
+        return writer.ToArray();
+    }
+
+    private static void Encode2DRow(BitWriter writer, byte[] row, int rowOffset, byte[] reference, int referenceOffset,
+        int width)
+    {
+        var a0 = 0;
+        var a1 = Pixel(row, rowOffset, 0, width) ? 0 : FindDiff(row, rowOffset, 0, width, false);
+        var b1 = Pixel(reference, referenceOffset, 0, width)
+            ? 0
+            : FindDiff(reference, referenceOffset, 0, width, false);
+
+        while (true)
+        {
+            var b2 = FindDiff2(reference, referenceOffset, b1, width, Pixel(reference, referenceOffset, b1, width));
+
+            if (b2 >= a1)
+            {
+                var delta = b1 - a1;
+                if (delta is < -3 or > 3)
+                {
+                    var a2 = FindDiff2(row, rowOffset, a1, width, Pixel(row, rowOffset, a1, width));
+                    PutCode(writer, HorizontalCode);
+
+                    if (a0 + a1 == 0 || !Pixel(row, rowOffset, a0, width))
+                    {
+                        PutSpan(writer, a1 - a0, WhiteCodes);
+                        PutSpan(writer, a2 - a1, BlackCodes);
+                    }
+                    else
+                    {
+                        PutSpan(writer, a1 - a0, BlackCodes);
+                        PutSpan(writer, a2 - a1, WhiteCodes);
+                    }
+
+                    a0 = a2;
+                }
+                else
+                {
+                    PutCode(writer, VerticalCodes[delta + 3]);
+                    a0 = a1;
+                }
+            }
+            else
+            {
+                PutCode(writer, PassCode);
+                a0 = b2;
+            }
+
+            if (a0 >= width)
+                break;
+
+            var rowColor = Pixel(row, rowOffset, a0, width);
+            a1 = FindDiff(row, rowOffset, a0, width, rowColor);
+            b1 = FindDiff(reference, referenceOffset, a0, width, !rowColor);
+            b1 = FindDiff(reference, referenceOffset, b1, width, rowColor);
+        }
+    }
+
+    private static bool Pixel(byte[] data, int offset, int index, int width)
+    {
+        if (index < 0 || index >= width)
+            return false;
+
+        return ((data[offset + (index >> 3)] >> (7 - (index & 7))) & 1) != 0;
+    }
+
+    private static int FindDiff(byte[] data, int offset, int start, int end, bool color)
+    {
+        for (var index = start; index < end; index++)
+            if (Pixel(data, offset, index, end) != color)
+                return index;
+
+        return end;
+    }
+
+    private static int FindDiff2(byte[] data, int offset, int start, int end, bool color)
+    {
+        return start < end ? FindDiff(data, offset, start, end, color) : end;
+    }
+
+    private static void PutCode(BitWriter writer, FaxCode code)
+    {
+        writer.PutBits(code.Code, code.Length);
+    }
+
+    private static void PutSpan(BitWriter writer, int span, FaxCode[] table)
+    {
+        while (span >= 2624)
+        {
+            var code = table[103];
+            writer.PutBits(code.Code, code.Length);
+            span -= code.RunLength;
+        }
+
+        if (span >= 64)
+        {
+            var code = table[63 + (span >> 6)];
+            writer.PutBits(code.Code, code.Length);
+            span -= code.RunLength;
+        }
+
+        var terminal = table[span];
+        writer.PutBits(terminal.Code, terminal.Length);
+    }
+
+    private sealed class BitWriter
+    {
+        private readonly MemoryStream _stream = new();
+        private int _current;
+        private int _remaining = 8;
+
+        internal void PutBits(int bits, int length)
+        {
+            while (length > _remaining)
+            {
+                _current |= bits >> (length - _remaining);
+                length -= _remaining;
+                FlushByte();
+            }
+
+            _current |= (bits & ((1 << length) - 1)) << (_remaining - length);
+            _remaining -= length;
+
+            if (_remaining == 0)
+                FlushByte();
+        }
+
+        internal void FlushPartialByte()
+        {
+            if (_remaining != 8)
+                FlushByte();
+        }
+
+        internal byte[] ToArray()
+        {
+            return _stream.ToArray();
+        }
+
+        private void FlushByte()
+        {
+            _stream.WriteByte((byte)_current);
+            _current = 0;
+            _remaining = 8;
+        }
+    }
+
+    private readonly record struct FaxCode(int Length, int Code, int RunLength);
 }

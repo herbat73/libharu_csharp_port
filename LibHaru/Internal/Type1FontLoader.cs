@@ -241,9 +241,9 @@ internal static class Type1FontLoader
                 break;
 
             var length = bytes[offset]
-                | (bytes[offset + 1] << 8)
-                | (bytes[offset + 2] << 16)
-                | (bytes[offset + 3] << 24);
+                         | (bytes[offset + 1] << 8)
+                         | (bytes[offset + 2] << 16)
+                         | (bytes[offset + 3] << 24);
             offset += 4;
 
             if (length < 0 || offset + length > bytes.Length)
@@ -252,14 +252,18 @@ internal static class Type1FontLoader
             data.Write(bytes, offset, length);
 
             if (segmentType == 1 && !sawBinary)
+            {
                 length1 += length;
+            }
             else if (segmentType == 2)
             {
                 sawBinary = true;
                 length2 += length;
             }
             else
+            {
                 length3 += length;
+            }
 
             offset += length;
         }
@@ -366,10 +370,8 @@ internal static class Type1FontLoader
                 case "FontBBox":
                     var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length == 4)
-                    {
                         for (var i = 0; i < 4; i++)
                             BBox[i] = ParseInt(parts[i]);
-                    }
                     break;
                 case "ItalicAngle":
                     ItalicAngle = (int)Math.Round(ParseDouble(value));
@@ -408,14 +410,12 @@ internal static class Type1FontLoader
             string? glyphName = null;
 
             foreach (var field in fields)
-            {
                 if (field.StartsWith("C ", StringComparison.Ordinal))
                     code = ParseInt(field[2..].Trim());
                 else if (field.StartsWith("WX ", StringComparison.Ordinal))
                     width = ParseInt(field[3..].Trim());
                 else if (field.StartsWith("N ", StringComparison.Ordinal))
                     glyphName = field[2..].Trim();
-            }
 
             if (width <= 0 && code != 0)
                 return;
@@ -438,22 +438,24 @@ internal static class Type1FontLoader
             if (glyphName.StartsWith("uni", StringComparison.Ordinal) &&
                 glyphName.Length >= 7 &&
                 int.TryParse(glyphName.AsSpan(3, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out unicode))
-            {
                 return true;
-            }
 
             if (glyphName.StartsWith('u') &&
                 glyphName.Length is >= 5 and <= 7 &&
                 int.TryParse(glyphName.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out unicode))
-            {
                 return true;
-            }
 
             return GlyphUnicode.TryGetValue(glyphName, out unicode);
         }
 
-        private static int ParseInt(string value) => int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+        private static int ParseInt(string value)
+        {
+            return int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+        }
 
-        private static double ParseDouble(string value) => double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+        private static double ParseDouble(string value)
+        {
+            return double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+        }
     }
 }

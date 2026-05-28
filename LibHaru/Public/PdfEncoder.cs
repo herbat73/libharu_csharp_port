@@ -28,5 +28,8 @@ public sealed class PdfEncoder
         return EncodingModel.GetByteType(text, index);
     }
 
-    public ushort GetUnicode(ushort code) => EncodingModel.GetUnicode(code);
+    public ushort GetUnicode(ushort code)
+    {
+        return EncodingModel.GetUnicode(code);
+    }
 }

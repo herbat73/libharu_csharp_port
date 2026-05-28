@@ -1,5 +1,4 @@
 using LibHaru.Internal;
-using System.Text;
 
 namespace LibHaru;
 
@@ -70,11 +69,9 @@ public sealed class PdfFont
     public int GetUnicodeWidth(char unicode)
     {
         if (EncodingModel.PreservesInputBytes)
-        {
             return CjkCMapData.TryGetCodeForUnicode(EncodingModel.Name, unicode, out var code)
                 ? Program.WidthOfCid(EncodingModel.ToCid(code))
                 : 0;
-        }
 
         return Program.WidthOfUnicode(unicode);
     }
@@ -95,27 +92,26 @@ public sealed class PdfFont
                 numSpace++;
 
             if (EncodingModel.IsComposite)
-            {
                 width += EncodingModel.WritingMode == PdfWritingMode.Horizontal
                     ? Program.WidthOfGlyph(Program.GlyphIdOfUnicode(ch))
                     : -Program.CidVerticalDisplacement;
-            }
             else
-            {
                 width += Program.WidthOfCode(EncodingModel, EncodingModel.EncodeChar(ch));
-            }
         }
 
         return new PdfTextWidth((uint)text.Length, numSpace, (uint)Math.Max(0, width), numSpace);
     }
 
-    public uint MeasureText(string text, double width, double fontSize, double charSpace, double wordSpace, bool wordWrap, out double realWidth)
+    public uint MeasureText(string text, double width, double fontSize, double charSpace, double wordSpace,
+        bool wordWrap, out double realWidth)
     {
         if (text is null)
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Text cannot be null.");
 
-        if (width <= 0 || fontSize <= 0 || double.IsNaN(width) || double.IsNaN(fontSize) || double.IsInfinity(width) || double.IsInfinity(fontSize))
-            throw Owner.CreateException(HaruStatus.InvalidParameter, "Text measurement width and font size must be positive finite numbers.");
+        if (width <= 0 || fontSize <= 0 || double.IsNaN(width) || double.IsNaN(fontSize) || double.IsInfinity(width) ||
+            double.IsInfinity(fontSize))
+            throw Owner.CreateException(HaruStatus.InvalidParameter,
+                "Text measurement width and font size must be positive finite numbers.");
 
         var measured = 0.0;
         var lastBreak = -1;
@@ -218,7 +214,8 @@ public sealed class PdfFont
                 continue;
 
             var code = (ushort)bytes[i];
-            if (byteType == PdfByteType.Lead && i + 1 < bytes.Length && EncodingModel.GetByteType(text, (uint)(i + 1)) == PdfByteType.Trail)
+            if (byteType == PdfByteType.Lead && i + 1 < bytes.Length &&
+                EncodingModel.GetByteType(text, (uint)(i + 1)) == PdfByteType.Trail)
             {
                 code = (ushort)((bytes[i] << 8) | bytes[i + 1]);
                 i++;
@@ -227,7 +224,8 @@ public sealed class PdfFont
             var unicode = EncodingModel.GetUnicode(code);
             var glyphId = unicode > 0 ? Program.MarkUnicodeUsed(unicode) : 0;
             var cid = EncodingModel.ToCid(code);
-            CompositeGlyphMap?.Register(cid, glyphId, new PdfCompositeCharCode(code, code > byte.MaxValue ? 2 : 1), unicode);
+            CompositeGlyphMap?.Register(cid, glyphId, new PdfCompositeCharCode(code, code > byte.MaxValue ? 2 : 1),
+                unicode);
         }
     }
 
@@ -239,11 +237,9 @@ public sealed class PdfFont
         var units = 0;
 
         foreach (var unicode in EnumerateUnicodeScalars(text))
-        {
             units += EncodingModel.WritingMode == PdfWritingMode.Horizontal
                 ? Program.WidthOfGlyph(Program.GlyphIdOfUnicode(unicode))
                 : -Program.CidVerticalDisplacement;
-        }
 
         return units * fontSize / 1000.0;
     }
@@ -324,7 +320,10 @@ public sealed class PdfFont
         return new PdfTextWidth(numChars, numWords, (uint)Math.Max(0, width), numSpace);
     }
 
-    private static bool IsPdfWhiteSpace(int code) => code is 0x00 or 0x09 or 0x0A or 0x0C or 0x0D or 0x20;
+    private static bool IsPdfWhiteSpace(int code)
+    {
+        return code is 0x00 or 0x09 or 0x0A or 0x0C or 0x0D or 0x20;
+    }
 
     private static IEnumerable<int> EnumerateUnicodeScalars(string text)
     {

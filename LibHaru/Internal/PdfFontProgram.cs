@@ -11,14 +11,14 @@ internal enum PdfFontProgramKind
 
 internal sealed class PdfFontProgram
 {
+    private readonly IReadOnlyDictionary<int, int> _cidWidthLookup;
     private readonly IReadOnlyDictionary<int, int> _codeWidths;
-    private readonly IReadOnlyDictionary<int, int> _unicodeWidths;
-    private readonly Func<int, int>? _unicodeWidthResolver;
+    private readonly Func<PdfFontSubsetRequest, PdfFontSubsetData>? _fontFileSubsetBuilder;
+    private readonly Func<int, int>? _glyphCidResolver;
     private readonly Func<int, int>? _glyphIdResolver;
     private readonly Func<int, int>? _glyphWidthResolver;
-    private readonly Func<int, int>? _glyphCidResolver;
-    private readonly IReadOnlyDictionary<int, int> _cidWidthLookup;
-    private readonly Func<PdfFontSubsetRequest, PdfFontSubsetData>? _fontFileSubsetBuilder;
+    private readonly Func<int, int>? _unicodeWidthResolver;
+    private readonly IReadOnlyDictionary<int, int> _unicodeWidths;
     private readonly SortedSet<int> _usedGlyphIds = [0];
     private readonly SortedDictionary<int, int> _usedUnicodeGlyphIds = [];
     private IReadOnlyDictionary<int, int>? _subsetGlyphIds;
@@ -58,7 +58,8 @@ internal sealed class PdfFontProgram
         CidOrdering = cidOrdering;
         CidSupplement = cidSupplement;
         CidWidths = cidWidths ?? Array.Empty<CjkCidWidth>();
-        CidDefaultWidth = cidDefaultWidth != 0 ? cidDefaultWidth : (descriptor.MissingWidth != 0 ? descriptor.MissingWidth : 1000);
+        CidDefaultWidth = cidDefaultWidth != 0 ? cidDefaultWidth :
+            descriptor.MissingWidth != 0 ? descriptor.MissingWidth : 1000;
         CidVerticalPosition = cidVerticalPosition;
         CidVerticalDisplacement = cidVerticalDisplacement;
         _cidWidthLookup = CidWidths.Count == 0
@@ -161,9 +162,15 @@ internal sealed class PdfFontProgram
         return Descriptor.MissingWidth;
     }
 
-    internal int GlyphIdOfUnicode(int unicode) => _glyphIdResolver?.Invoke(unicode) ?? 0;
+    internal int GlyphIdOfUnicode(int unicode)
+    {
+        return _glyphIdResolver?.Invoke(unicode) ?? 0;
+    }
 
-    internal int CidOfGlyph(int glyphId) => _glyphCidResolver?.Invoke(glyphId) ?? glyphId;
+    internal int CidOfGlyph(int glyphId)
+    {
+        return _glyphCidResolver?.Invoke(glyphId) ?? glyphId;
+    }
 
     internal int WidthOfGlyph(int glyphId)
     {

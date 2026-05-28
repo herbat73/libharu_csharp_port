@@ -44,6 +44,10 @@ public sealed class PdfImage
 
     public PdfPoint Size => new(Width, Height);
 
+    private PdfStreamObject Stream =>
+        ImageObject.Value as PdfStreamObject
+        ?? throw Owner.CreateException(HaruStatus.InvalidImage, "Image object must be a stream.");
+
     public bool Validate()
     {
         try
@@ -65,13 +69,15 @@ public sealed class PdfImage
             throw Owner.CreateException(HaruStatus.InvalidOperation, "Image masks cannot have color-key masks.");
 
         if (BitsPerComponent != 8)
-            throw Owner.CreateException(HaruStatus.InvalidBitPerComponent, "Color-key masks require 8 bits per component.");
+            throw Owner.CreateException(HaruStatus.InvalidBitPerComponent,
+                "Color-key masks require 8 bits per component.");
 
         if (GetColorSpaceName() != "DeviceRGB")
             throw Owner.CreateException(HaruStatus.InvalidColorSpace, "Color-key masks require DeviceRGB images.");
 
         if (rMax > 255 || gMax > 255 || bMax > 255 || rMin > rMax || gMin > gMax || bMin > bMax)
-            throw Owner.CreateException(HaruStatus.InvalidParameter, "Color-key mask values must be within 0..255 ranges.");
+            throw Owner.CreateException(HaruStatus.InvalidParameter,
+                "Color-key mask values must be within 0..255 ranges.");
 
         Stream.Dictionary.Set("Mask", new PdfArray([
             new PdfInteger((int)rMin),
@@ -129,11 +135,13 @@ public sealed class PdfImage
             var subtype = stream.Dictionary.Get<PdfName>("Subtype");
 
             if (type?.Value != "XObject" || subtype?.Value != "Image")
-                throw Owner.CreateException(HaruStatus.InvalidImage, "Image dictionary Type/Subtype entries are invalid.");
+                throw Owner.CreateException(HaruStatus.InvalidImage,
+                    "Image dictionary Type/Subtype entries are invalid.");
         }
         catch (HaruException ex) when (ex.Status != HaruStatus.InvalidImage)
         {
-            throw Owner.CreateException(HaruStatus.InvalidImage, "Image dictionary Type/Subtype entries are invalid.", ex.Status);
+            throw Owner.CreateException(HaruStatus.InvalidImage, "Image dictionary Type/Subtype entries are invalid.",
+                ex.Status);
         }
     }
 
@@ -156,10 +164,6 @@ public sealed class PdfImage
             throw Owner.CreateException(HaruStatus.InvalidColorSpace, "Image ColorSpace entry is invalid.", ex.Status);
         }
     }
-
-    private PdfStreamObject Stream =>
-        ImageObject.Value as PdfStreamObject
-            ?? throw Owner.CreateException(HaruStatus.InvalidImage, "Image object must be a stream.");
 
     private void ValidatePeer(PdfImage? image)
     {
