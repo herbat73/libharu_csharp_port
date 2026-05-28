@@ -1,0 +1,5 @@
+# generated_pdf	reference_pdf	reference_sha256
+# Add rows when exact upstream C-output PDFs or stable SHA-256 hashes are available.
+# Examples:
+# compatibility-demos/compat-arc-demo.pdf	fixtures/upstream/arc_demo.pdf	-
+# compatibility-demos/compat-font-demo.pdf	-	0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
