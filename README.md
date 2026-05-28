@@ -1,4 +1,4 @@
-# Haru Free PDF Library [![Build Status](https://github.com/libharu/libharu/actions/workflows/cmake.yml/badge.svg)](https://github.com/libharu/libharu/actions/workflows/cmake.yml)
+# Haru Free PDF Library C# full managed code port 
 
   **URL http://libharu.org/**
 
@@ -80,4 +80,4 @@ to the following restrictions:
 3. Adobe Systems Inc.
    We thank Adobe Systems Inc. for publishing PDF specification.
 
-4. ChatGpt.com for providing unlimited testing of the Codex along with the ChatGPT 5.5 model   
+4. ChatGpt.com for providing Codex along with the ChatGPT 5.5 model for migration from c to c# process   

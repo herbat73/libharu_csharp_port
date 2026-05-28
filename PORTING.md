@@ -8,21 +8,14 @@ From the repository root:
 
 ```powershell
 dotnet build LibHaruSharp.sln
-dotnet run --project csharp\LibHaru.SmokeTests\LibHaru.SmokeTests.csproj
-```
-
-From this `csharp` directory:
-
-```powershell
-dotnet build ..\LibHaruSharp.sln
 dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj
 ```
 
 The smoke test writes `artifacts/libharu-managed-smoke.pdf` and companion coverage PDFs under `artifacts`.
 Compatibility demo ports write generated PDFs and `.structure.txt` regression profiles under `artifacts/compatibility-demos`.
 Checked-in font and image fixtures write generated coverage PDFs under `artifacts/font-fixtures` and `artifacts/image-fixtures`.
-When Poppler `pdftoppm` is available, selected first-page renders are checked against `csharp/LibHaru.SmokeTests/fixtures/visual-reference.tsv` and write pixel profiles under `artifacts/rendered`. Set `LIBHARU_PDFTOPPM` to a `pdftoppm` executable or containing directory when it is not on `PATH`; set `LIBHARU_REFRESH_VISUAL_REFERENCES=1` to refresh the TSV from current renders.
-Exact upstream/reference PDF comparisons are manifest-driven through `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv`; rows can assert byte-for-byte generated matches, generated SHA-256 hashes, or checked-in upstream C-output SHA-256 hashes.
+When Poppler `pdftoppm` is available, selected first-page renders are checked against `LibHaru.SmokeTests/fixtures/visual-reference.tsv` and write pixel profiles under `artifacts/rendered`. Set `LIBHARU_PDFTOPPM` to a `pdftoppm` executable or containing directory when it is not on `PATH`; set `LIBHARU_REFRESH_VISUAL_REFERENCES=1` to refresh the TSV from current renders.
+Exact upstream/reference PDF comparisons are manifest-driven through `LibHaru.SmokeTests/fixtures/reference-output.tsv`; rows can assert byte-for-byte generated matches, generated SHA-256 hashes, or checked-in upstream C-output SHA-256 hashes.
 
 ## Current Managed Slice
 
@@ -30,7 +23,7 @@ Status: the checked-in C headers, source modules, bundled fixtures, canonical PD
 
 Latest recheck on 2026-05-28:
 
-- `dotnet build ..\LibHaruSharp.sln` succeeded with 0 warnings and 0 errors.
+- `dotnet build LibHaruSharp.sln` succeeded with 0 warnings and 0 errors.
 - `dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj` generated the managed smoke PDFs, 4 real-font fixture PDFs, 1 external image fixture PDF covering 4 image assets, 28 compatibility demo PDFs, and passed 41 generated-PDF structural reader checks.
 - The smoke harness checks 20 checked-in upstream C-output PDF SHA-256 fixture rows. No byte-identical managed/upstream exact-PDF rows are configured yet because the current managed outputs differ in metadata/object serialization from the canonical demo PDFs.
 - Optional Poppler visual render checks were skipped in this shell because `pdftoppm` was not available on `PATH` and no local executable was found; the checked-in `visual-reference.tsv` remains the current Poppler profile baseline.
@@ -64,9 +57,9 @@ The local source migration is complete for the checked-in headers, C modules, de
 
 | C module group | Managed destination | Current migration status |
 | --- | --- | --- |
-| Core objects, dictionary, array, primitive values | `csharp/LibHaru/Internal` | Complete for checked-in source, including object ownership, stream/dictionary guards, typed subclass validation, and encrypted string/binary output. |
-| Streams, xref, trailer writer | `csharp/LibHaru/Internal`, `PdfDocument` | Complete for checked-in source; generated-PDF reader checks cover xref offsets, trailers, references, stream filters, and `startxref`. |
-| Document, catalog, pages, page operators | `csharp/LibHaru/Public` | Complete for local `include/hpdf.h` exports, including document lifecycle, page tree operations, metadata, viewer state, page graphics state, text, paths, colors, shared streams, and compatibility demos. |
+| Core objects, dictionary, array, primitive values | `LibHaru/Internal` | Complete for checked-in source, including object ownership, stream/dictionary guards, typed subclass validation, and encrypted string/binary output. |
+| Streams, xref, trailer writer | `LibHaru/Internal`, `PdfDocument` | Complete for checked-in source; generated-PDF reader checks cover xref offsets, trailers, references, stream filters, and `startxref`. |
+| Document, catalog, pages, page operators | `LibHaru/Public` | Complete for local `include/hpdf.h` exports, including document lifecycle, page tree operations, metadata, viewer state, page graphics state, text, paths, colors, shared streams, and compatibility demos. |
 | Error, memory manager, list utilities | `HaruError`, `HaruStatus`, managed collections | Complete for managed parity: document-owned error state/callbacks and typed validators replace C memory/list ownership patterns. |
 | Base14 fonts | `PdfFont`, `Base14Fonts`, `PdfFontProgram`, generated Base14 data | Complete with generated upstream widths/descriptors and FontSpecific handling for Symbol/ZapfDingbats. |
 | Type1 fonts | `Type1FontLoader`, `PdfFontProgram`, `PdfDocument` | Complete for AFM parsing, PFB/PFA loading, descriptors, widths arrays, and `/FontFile` embedding. |
@@ -80,4 +73,4 @@ The local source migration is complete for the checked-in headers, C modules, de
 | Outlines, destinations, annotations | `PdfDestination`, `PdfOutline`, `PdfAnnotation`, `PdfPage`, `PdfDocument` | Complete for local headers and audited upstream: destinations, outlines, page labels, link/URI/text/free-text/shape/markup/popup/stamp/projection/widget/basic 3D annotations, appearances, and validation. |
 | Names, attachments, JavaScript, PDF/A associated files | `PdfEmbeddedFile`, `PdfJavaScript`, `PdfOutputIntent`, `PdfDocument` | Complete for embedded-file streams/filespecs, name trees, catalog associated files, JavaScript actions, PDF/A restrictions, output intents, and typed resource validators. |
 | U3D, 3D measure, shadings, ext graphics state | `PdfU3D`, `Pdf3DView`, `PdfShading`, `PdfExtGState`, `PdfPage` | Complete for U3D streams, 3D views/nodes/cameras/cross-sections, C3D/PD3 measures, ExData, axial/radial/free-form triangle mesh shadings, extended graphics state, and typed 3D validators. |
-| Compatibility demos and regression fixtures | `csharp/LibHaru.SmokeTests` | Complete for current checked-in demos: 28 managed compatibility demo PDFs, structural profiles, 20 upstream C-output SHA-256 rows, 10 Poppler visual profiles, 4 real-font fixture PDFs, and 1 external image fixture PDF covering JPEG/PNG/raw/CCITT assets. |
+| Compatibility demos and regression fixtures | `LibHaru.SmokeTests` | Complete for current checked-in demos: 28 managed compatibility demo PDFs, structural profiles, 20 upstream C-output SHA-256 rows, 10 Poppler visual profiles, 4 real-font fixture PDFs, and 1 external image fixture PDF covering JPEG/PNG/raw/CCITT assets. |
