@@ -26,6 +26,9 @@ _libs
 *.tmp
 bin/
 obj/
+artifacts/
+.vs/
+.idea/
 *.so
 *.so.*
 cscope.out
@@ -42,4 +45,3 @@ CPackConfig.cmake
 CPackSourceConfig.cmake
 cmake_install.cmake
 depcomp
-/artifacts/
