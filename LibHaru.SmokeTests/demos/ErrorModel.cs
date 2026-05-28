@@ -79,7 +79,9 @@ public static class ErrorModel
         var view = pdf.Create3DView("default");
         ExpectDocumentError(pdf, HaruStatus.NameOutOfRange, () => view.SetLighting(new string('A', 128)));
 
+        Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("Error model parity smoke passed");
+        Console.ResetColor();
     }
 
     private static void ExpectDocumentError(PdfDocument pdf, uint expectedStatus, Action action)

@@ -16,7 +16,9 @@ public static class ObjectSemantics
         DocumentResourceValidatorsRejectInvalidObjects();
         EncryptedStringsWriteAsEncryptedHex();
 
+        Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("Object semantics smoke passed");
+        Console.ResetColor();
     }
 
     private static void DirectObjectReuseIsRejected()

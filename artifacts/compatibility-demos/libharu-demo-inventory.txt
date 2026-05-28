@@ -1,5 +1,5 @@
 libharu demo inventory
-source directory: C:\Users\AdamA\source\sand\libharu_csharp_port\demo
+source directory: C:\Users\aadam\RiderProjects\libharu_csharp_port\demo
 managed compatibility PDFs: 28
 
 sources:

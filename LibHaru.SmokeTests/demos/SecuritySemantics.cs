@@ -12,7 +12,9 @@ public static class SecuritySemantics
         StandardSecurityRevision3AuthenticatesAndDecrypts();
         EncryptOffReplacesSecurityDictionaryWithNull();
 
+        Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("Security semantics smoke passed");
+        Console.ResetColor();
     }
 
     private static void EncryptionDictionaryValidationMatchesObjectSubclass()

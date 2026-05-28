@@ -15,7 +15,9 @@ public static class PdfStructuralReader
         foreach (var pdfPath in pdfPaths)
             CheckPdf(pdfPath);
 
+        Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine($"Reader-level structural checks passed for {pdfPaths.Length} generated PDF artifact(s).");
+        Console.ResetColor();
     }
 
     private static void CheckPdf(string pdfPath)

@@ -139,7 +139,9 @@ public static class PdfAValidation
             RequireThrows(HaruStatus.InvalidDocumentState, () => HPDF_SaveToStream(pdfA4MissingRevision));
         }
 
+        Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("PDF/A standalone rule smoke passed");
+        Console.ResetColor();
     }
 
     private static void AddPdfARequirements(PdfDocument pdf, PdfPdfAType type = PdfPdfAType.PdfA1B)
