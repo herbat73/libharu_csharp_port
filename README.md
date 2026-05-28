@@ -8,7 +8,7 @@
 
   **Copyright 2026 (c) Port to C# Adam Adamczyk + Codex with ChatGPT 5.5 model**
 
-See INSTALL for instructions on how to install libHaru.
+See [PORTING](PORTING.md) for porting info and instructions on how to install libHaru C#.
 
 
 # What is Haru Free PDF Library?
@@ -32,7 +32,7 @@ complicated internal structure of PDF.
 # The differences from the orginal version 
 
 
-The biggest differences are that all code is written in C# as result of full port of orginal libhary library.
+The biggest differences are that all code is written in C# as result of full port of orginal [LibHaru C](https://github.com/libharu/libharu) library.
 
 
 # License
