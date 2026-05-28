@@ -96,8 +96,9 @@ public sealed class PdfFont
 
             if (EncodingModel.IsComposite)
             {
-                var glyphId = Program.GlyphIdOfUnicode(ch);
-                width += Program.WidthOfGlyph(glyphId);
+                width += EncodingModel.WritingMode == PdfWritingMode.Horizontal
+                    ? Program.WidthOfGlyph(Program.GlyphIdOfUnicode(ch))
+                    : -Program.CidVerticalDisplacement;
             }
             else
             {
@@ -235,8 +236,9 @@ public sealed class PdfFont
 
         foreach (var unicode in EnumerateUnicodeScalars(text))
         {
-            var glyphId = Program.GlyphIdOfUnicode(unicode);
-            units += Program.WidthOfGlyph(glyphId);
+            units += EncodingModel.WritingMode == PdfWritingMode.Horizontal
+                ? Program.WidthOfGlyph(Program.GlyphIdOfUnicode(unicode))
+                : -Program.CidVerticalDisplacement;
         }
 
         return units * fontSize / 1000.0;

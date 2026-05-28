@@ -14,10 +14,12 @@ var compressionPdfPath = Path.Combine(artifacts, "libharu-managed-compression.pd
 CompressionFilters.Test(root.FullName, compressionPdfPath);
 var fontPdfPath = Path.Combine(artifacts, "libharu-managed-fonts.pdf");
 FontAndEncoder.Test(root.FullName, fontPdfPath);
+FontFixtureCoverage.Test(root.FullName, artifacts);
 var documentFeaturesPdfPath = Path.Combine(artifacts, "libharu-managed-document-features.pdf");
 DocumentFeatures.Test(root.FullName, documentFeaturesPdfPath);
 var imageFeaturesPdfPath = Path.Combine(artifacts, "libharu-managed-images.pdf");
 ImageFeatures.Test(root.FullName, imageFeaturesPdfPath);
+ImageFixtureCoverage.Test(root.FullName, artifacts);
 var nameTreePdfPath = Path.Combine(artifacts, "libharu-managed-name-trees.pdf");
 NameTreeFixtures.Test(root.FullName, nameTreePdfPath);
 CompatibilityDemos.Test(root.FullName, artifacts);

@@ -180,7 +180,7 @@ public sealed class PdfDocument : IDisposable
     {
         EnsureHasDoc();
 
-        var contents = AddObject(new PdfStreamObject([]));
+        var contents = AddObject(new PdfStreamObject([]) { Subclass = PdfObjectClass.ContentStream });
         var pageObject = AddObject(new PdfDictionary { Subclass = PdfObjectClass.Page });
         var page = new PdfPage(this, pageObject, contents);
 
@@ -200,7 +200,7 @@ public sealed class PdfDocument : IDisposable
         if (index < 0)
             Throw(HaruStatus.InvalidPage, "The target page does not belong to this document.");
 
-        var contents = AddObject(new PdfStreamObject([]));
+        var contents = AddObject(new PdfStreamObject([]) { Subclass = PdfObjectClass.ContentStream });
         var pageObject = AddObject(new PdfDictionary { Subclass = PdfObjectClass.Page });
         var page = new PdfPage(this, pageObject, contents);
 
@@ -516,7 +516,8 @@ public sealed class PdfDocument : IDisposable
         var stream = new PdfStreamObject(Encoding.UTF8.GetBytes(code))
         {
             Kind = PdfStreamKind.JavaScript,
-            CompressionMode = _compressionMode
+            CompressionMode = _compressionMode,
+            Subclass = PdfObjectClass.JavaScript
         };
         var obj = AddObject(stream);
         return new PdfJavaScript(this, obj);
@@ -565,7 +566,8 @@ public sealed class PdfDocument : IDisposable
             var stream = new PdfStreamObject(data)
             {
                 Kind = PdfStreamKind.EmbeddedFile,
-                CompressionMode = _compressionMode
+                CompressionMode = _compressionMode,
+                Subclass = PdfObjectClass.EmbeddedFile
             };
             stream.Dictionary.SetName("Type", "EmbeddedFile");
             var streamObject = AddObject(stream);
@@ -573,7 +575,7 @@ public sealed class PdfDocument : IDisposable
             var ef = new PdfDictionary();
             ef.Set("F", streamObject.Reference);
 
-            var fileSpec = new PdfDictionary();
+            var fileSpec = new PdfDictionary { Subclass = PdfObjectClass.FileSpec };
             fileSpec.SetName("Type", "Filespec");
             fileSpec.Set("F", PdfString.FromText(name));
             fileSpec.Set("UF", PdfString.FromText(name));
@@ -711,7 +713,8 @@ public sealed class PdfDocument : IDisposable
         var stream = new PdfStreamObject(data)
         {
             Kind = PdfStreamKind.U3D,
-            CompressionMode = _compressionMode
+            CompressionMode = _compressionMode,
+            Subclass = PdfObjectClass.U3D
         };
         stream.Dictionary.SetName("Type", "3D");
         stream.Dictionary.SetName("Subtype", "U3D");
@@ -724,7 +727,7 @@ public sealed class PdfDocument : IDisposable
         if (string.IsNullOrWhiteSpace(name))
             Throw(HaruStatus.InvalidParameter, "3D view name cannot be empty.");
 
-        var dictionary = new PdfDictionary();
+        var dictionary = new PdfDictionary { Subclass = PdfObjectClass.View3D };
         var obj = AddObject(dictionary);
         return new Pdf3DView(this, name, obj);
     }
@@ -734,14 +737,14 @@ public sealed class PdfDocument : IDisposable
         if (string.IsNullOrWhiteSpace(name))
             Throw(HaruStatus.InvalidParameter, "3D node name cannot be empty.");
 
-        var dictionary = new PdfDictionary();
+        var dictionary = new PdfDictionary { Subclass = PdfObjectClass.Node3D };
         var obj = AddObject(dictionary);
         return new Pdf3DNode(this, obj, name);
     }
 
     public Pdf3DMeasure Create3DC3DMeasure(PdfPoint3D firstAnchorPoint, PdfPoint3D textAnchorPoint)
     {
-        var dictionary = new PdfDictionary();
+        var dictionary = new PdfDictionary { Subclass = PdfObjectClass.Measure3D };
         dictionary.SetName("Type", "3DMeasure");
         dictionary.SetName("Subtype", "3DC");
         dictionary.Set("A1", Point3DArray(firstAnchorPoint));
@@ -759,7 +762,7 @@ public sealed class PdfDocument : IDisposable
         double value,
         string units)
     {
-        var dictionary = new PdfDictionary();
+        var dictionary = new PdfDictionary { Subclass = PdfObjectClass.Measure3D };
         dictionary.SetName("Type", "3DMeasure");
         dictionary.SetName("Subtype", "PD3");
         dictionary.Set("AP", Point3DArray(annotationPlaneNormal));
@@ -789,7 +792,7 @@ public sealed class PdfDocument : IDisposable
             Throw(HaruStatus.InvalidObject, "ICC profile does not belong to this document.");
 
         iccProfile.ValidateOrThrow();
-        var dictionary = new PdfDictionary();
+        var dictionary = new PdfDictionary { Subclass = PdfObjectClass.OutputIntent };
         dictionary.SetName("Type", "OutputIntent");
         dictionary.SetName("S", "GTS_PDFA1");
         dictionary.Set("OutputConditionIdentifier", PdfString.FromText(outputConditionIdentifier));
@@ -842,7 +845,8 @@ public sealed class PdfDocument : IDisposable
         var profileStream = new PdfStreamObject(iccProfile.ToArray())
         {
             Kind = PdfStreamKind.IccProfile,
-            CompressionMode = _compressionMode
+            CompressionMode = _compressionMode,
+            Subclass = PdfObjectClass.IccProfile
         };
         profileStream.Dictionary.Set("N", new PdfInteger(componentCount));
         profileStream.Dictionary.SetName("Alternate", alternate);
@@ -1653,6 +1657,7 @@ public sealed class PdfDocument : IDisposable
         if (program.Descriptor.MissingWidth != 0)
             descendant.Set("DW", new PdfInteger(program.Descriptor.MissingWidth));
 
+        descendant.Set("DW2", new PdfArray([new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)]));
         descendant.Set("W", new PdfArray());
         var descendantObject = AddObject(descendant);
         var toUnicodeStream = new PdfStreamObject([]);
@@ -1873,14 +1878,25 @@ public sealed class PdfDocument : IDisposable
 
         if (program.FontFile is not null)
         {
+            if (string.Equals(program.FontFile.Subtype, "OpenType", StringComparison.Ordinal))
+                EnsurePdfVersion("1.6");
+
             var fontFileStream = new PdfStreamObject(program.FontFile.Data)
             {
                 Kind = PdfStreamKind.Font,
                 CompressionMode = _compressionMode
             };
-            fontFileStream.Dictionary.Set("Length1", new PdfInteger(program.FontFile.Length1));
-            fontFileStream.Dictionary.Set("Length2", new PdfInteger(program.FontFile.Length2));
-            fontFileStream.Dictionary.Set("Length3", new PdfInteger(program.FontFile.Length3));
+
+            if (program.FontFile.Subtype is not null)
+                fontFileStream.Dictionary.SetName("Subtype", program.FontFile.Subtype);
+
+            if (program.FontFile.WritesLengthEntries)
+            {
+                fontFileStream.Dictionary.Set("Length1", new PdfInteger(program.FontFile.Length1));
+                fontFileStream.Dictionary.Set("Length2", new PdfInteger(program.FontFile.Length2));
+                fontFileStream.Dictionary.Set("Length3", new PdfInteger(program.FontFile.Length3));
+            }
+
             program.FontFileObject = AddObject(fontFileStream);
             _fontFileObjects.Add(program.FontFileObject);
             descriptor.Set(program.FontFile.DescriptorKey, program.FontFileObject.Reference);
@@ -1945,9 +1961,12 @@ public sealed class PdfDocument : IDisposable
             if (program.FontFileObject?.Value is PdfStreamObject fontFileStream)
             {
                 fontFileStream.SetData(subsetData);
-                fontFileStream.Dictionary.Set("Length1", new PdfInteger(program.FontFile.Length1));
-                fontFileStream.Dictionary.Set("Length2", new PdfInteger(program.FontFile.Length2));
-                fontFileStream.Dictionary.Set("Length3", new PdfInteger(program.FontFile.Length3));
+                if (program.FontFile.WritesLengthEntries)
+                {
+                    fontFileStream.Dictionary.Set("Length1", new PdfInteger(program.FontFile.Length1));
+                    fontFileStream.Dictionary.Set("Length2", new PdfInteger(program.FontFile.Length2));
+                    fontFileStream.Dictionary.Set("Length3", new PdfInteger(program.FontFile.Length3));
+                }
             }
         }
 
@@ -2597,7 +2616,8 @@ public sealed class PdfDocument : IDisposable
             var profileStream = new PdfStreamObject(profile)
             {
                 Kind = PdfStreamKind.IccProfile,
-                CompressionMode = _compressionMode
+                CompressionMode = _compressionMode,
+                Subclass = PdfObjectClass.IccProfile
             };
             profileStream.Dictionary.Set("N", new PdfInteger(colorSpace == PdfColorSpace.DeviceGray ? 1 : 3));
             var profileObject = AddObject(profileStream);

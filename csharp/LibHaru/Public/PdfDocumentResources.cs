@@ -29,8 +29,11 @@ public sealed class PdfJavaScript
 
     internal void ValidateOrThrow()
     {
-        if (ScriptObject.Value is not PdfStreamObject)
+        if (ScriptObject.Value is not PdfStreamObject stream)
             throw Owner.CreateException(HaruStatus.InvalidObject, "JavaScript object must be a stream.");
+
+        if (!stream.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.JavaScript))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "JavaScript object must be a JavaScript stream.");
     }
 }
 
@@ -142,11 +145,17 @@ public sealed class PdfEmbeddedFile
         if (FileStreamObject.Value is not PdfStreamObject stream || !ReferenceEquals(stream.Dictionary, _fileStreamDictionary))
             throw Owner.CreateException(HaruStatus.InvalidObject, "Embedded file stream object is invalid.");
 
+        if (!_fileSpec.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.FileSpec))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Embedded file filespec object must be a Filespec dictionary.");
+
+        if (!stream.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.EmbeddedFile))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Embedded file stream object must be an embedded-file stream.");
+
         try
         {
             var type = _fileSpec.Get<PdfName>("Type");
             var ef = _fileSpec.Get<PdfDictionary>("EF");
-            var fileStream = ef?.GetItem("F", PdfObjectClass.Dictionary);
+            var fileStream = ef?.GetItem("F", PdfObjectClass.Dictionary | PdfObjectClass.EmbeddedFile);
             var streamType = _fileStreamDictionary.Get<PdfName>("Type");
             var parameters = _fileStreamDictionary.Get<PdfDictionary>("Params");
 
@@ -439,6 +448,9 @@ public sealed class PdfU3D
         if (U3DObject.Value is not PdfStreamObject stream)
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "U3D object must be a stream.");
 
+        if (!stream.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.U3D))
+            throw Owner.CreateException(HaruStatus.InvalidU3DData, "U3D object must be a U3D stream.");
+
         try
         {
             var type = stream.Dictionary.Get<PdfName>("Type");
@@ -699,6 +711,9 @@ public sealed class Pdf3DView
         if (ViewObject.Value is not PdfDictionary dictionary)
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D view object must be a dictionary.");
 
+        if (!dictionary.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.View3D))
+            throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D view object must be a 3D view dictionary.");
+
         try
         {
             var type = dictionary.Get<PdfName>("Type");
@@ -801,9 +816,19 @@ public sealed class Pdf3DNode
         if (NodeObject.Value is not PdfDictionary dictionary)
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D node object must be a dictionary.");
 
-        var type = dictionary.Get<PdfName>("Type");
-        if (type?.Value != "3DNode")
-            throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D node Type entry is invalid.");
+        if (!dictionary.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.Node3D))
+            throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D node object must be a 3D node dictionary.");
+
+        try
+        {
+            var type = dictionary.Get<PdfName>("Type");
+            if (type?.Value != "3DNode")
+                throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D node Type entry is invalid.");
+        }
+        catch (HaruException ex) when (ex.Status != HaruStatus.InvalidU3DData)
+        {
+            throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D node Type entry is invalid.", ex.Status);
+        }
     }
 }
 
@@ -871,9 +896,19 @@ public sealed class Pdf3DMeasure
         if (MeasureObject.Value is not PdfDictionary dictionary)
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D measure object must be a dictionary.");
 
-        var type = dictionary.Get<PdfName>("Type");
-        if (type?.Value != "3DMeasure")
-            throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D measure Type entry is invalid.");
+        if (!dictionary.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.Measure3D))
+            throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D measure object must be a 3D measure dictionary.");
+
+        try
+        {
+            var type = dictionary.Get<PdfName>("Type");
+            if (type?.Value != "3DMeasure")
+                throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D measure Type entry is invalid.");
+        }
+        catch (HaruException ex) when (ex.Status != HaruStatus.InvalidU3DData)
+        {
+            throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D measure Type entry is invalid.", ex.Status);
+        }
     }
 }
 
@@ -894,11 +929,14 @@ public sealed class PdfOutputIntent
         if (IntentObject.Value is not PdfDictionary dictionary)
             throw Owner.CreateException(HaruStatus.InvalidObject, "Output intent object must be a dictionary.");
 
+        if (!dictionary.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.OutputIntent))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Output intent object must be an output-intent dictionary.");
+
         try
         {
             var type = dictionary.Get<PdfName>("Type");
             var subtype = dictionary.Get<PdfName>("S");
-            var profile = dictionary.GetItem("DestOutputProfile", PdfObjectClass.Dictionary);
+            var profile = dictionary.GetItem("DestOutputProfile", PdfObjectClass.Dictionary | PdfObjectClass.IccProfile);
 
             if (type?.Value != "OutputIntent" || subtype?.Value != "GTS_PDFA1" || profile is not PdfStreamObject)
                 throw Owner.CreateException(HaruStatus.InvalidObject, "Output intent dictionary entries are invalid.");
@@ -948,8 +986,11 @@ public sealed class PdfContentStream
 
     internal void ValidateOrThrow()
     {
-        if (StreamObject.Value is not PdfStreamObject)
+        if (StreamObject.Value is not PdfStreamObject stream)
             throw Owner.CreateException(HaruStatus.InvalidStream, "Content stream object must be a stream.");
+
+        if (!stream.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.ContentStream))
+            throw Owner.CreateException(HaruStatus.InvalidStream, "Content stream object must be a page content stream.");
     }
 }
 
@@ -982,6 +1023,9 @@ public sealed class PdfExData
     {
         if (ExDataObject.Value is not PdfDictionary dictionary)
             throw Owner.CreateException(HaruStatus.InvalidObject, "External data object must be a dictionary.");
+
+        if (!dictionary.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.ExData))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "External data object must be an ExData dictionary.");
 
         try
         {
@@ -1017,6 +1061,9 @@ public sealed class PdfIccProfile
     {
         if (ProfileObject.Value is not PdfStreamObject stream)
             throw Owner.CreateException(HaruStatus.InvalidObject, "ICC profile must be a stream.");
+
+        if (!stream.MatchesClass(PdfObjectClass.Dictionary | PdfObjectClass.IccProfile))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "ICC profile must be an ICC profile stream.");
 
         try
         {

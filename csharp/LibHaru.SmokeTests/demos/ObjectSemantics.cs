@@ -12,6 +12,7 @@ public static class ObjectSemantics
         CollectionLookupsValidateObjectClasses();
         CollectionLookupsRequireExactSubclasses();
         ModuleValidatorsRejectSubclassMismatches();
+        MigratedDocumentResourcesRejectSubclassMismatches();
         DocumentResourceValidatorsRejectInvalidObjects();
         EncryptedStringsWriteAsEncryptedHex();
 
@@ -215,6 +216,120 @@ public static class ObjectSemantics
         }
     }
 
+    private static void MigratedDocumentResourcesRejectSubclassMismatches()
+    {
+        using (var pdf = PdfDocument.New())
+        {
+            var javaScript = pdf.CreateJavaScript("app.alert('x');");
+            ((PdfStreamObject)javaScript.ScriptObject.Value).Subclass = PdfObjectClass.XObject;
+
+            var ex = RequireThrows(() => pdf.SetOpenAction(javaScript));
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidObject, "JavaScript subclass validation");
+        }
+
+        var tempFile = Path.Combine(AppContext.BaseDirectory, $"embedded-subclass-{Guid.NewGuid():N}.txt");
+        File.WriteAllText(tempFile, "embedded payload");
+        try
+        {
+            using (var pdf = PdfDocument.New())
+            {
+                var embeddedFile = pdf.AttachFile(tempFile);
+                ((PdfDictionary)embeddedFile.FileSpecObject.Value).Subclass = PdfObjectClass.Annotation;
+
+                var ex = RequireThrows(() => embeddedFile.SetDescription("broken"));
+                RequireDocumentStatus(pdf, ex, HaruStatus.InvalidObject, "Embedded filespec subclass validation");
+            }
+
+            using (var pdf = PdfDocument.New())
+            {
+                var embeddedFile = pdf.AttachFile(tempFile);
+                ((PdfStreamObject)embeddedFile.FileStreamObject.Value).Subclass = PdfObjectClass.XObject;
+
+                var ex = RequireThrows(() => embeddedFile.SetDescription("broken"));
+                RequireDocumentStatus(pdf, ex, HaruStatus.InvalidObject, "Embedded file stream subclass validation");
+            }
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var profile = pdf.LoadIccProfileFromMem([1, 2, 3, 4], 3);
+            ((PdfStreamObject)profile.ProfileObject.Value).Subclass = PdfObjectClass.XObject;
+
+            var ex = RequireThrows(profile.ValidateOrThrow);
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidObject, "ICC profile subclass validation");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var intent = pdf.AppendOutputIntent("sRGB", [1, 2, 3, 4], "sRGB");
+            ((PdfDictionary)intent.IntentObject.Value).Subclass = PdfObjectClass.Catalog;
+
+            var ex = RequireThrows(() => pdf.SaveToStream());
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidObject, "Output intent subclass validation");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var u3d = pdf.LoadU3DFromMem([1, 2, 3, 4]);
+            ((PdfStreamObject)u3d.U3DObject.Value).Subclass = PdfObjectClass.XObject;
+
+            var ex = RequireThrows(() => u3d.SetDefault3DView("Default"));
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidU3DData, "U3D stream subclass validation");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var view = pdf.Create3DView("default");
+            ((PdfDictionary)view.ViewObject.Value).Subclass = PdfObjectClass.Node3D;
+
+            var ex = RequireThrows(() => view.SetLighting("Day"));
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidU3DData, "3D view subclass validation");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var node = pdf.Create3DNode("part");
+            ((PdfDictionary)node.NodeObject.Value).Subclass = PdfObjectClass.View3D;
+
+            var ex = RequireThrows(() => node.SetOpacity(0.5));
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidU3DData, "3D node subclass validation");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var measure = pdf.Create3DC3DMeasure(new PdfPoint3D(0, 0, 0), new PdfPoint3D(1, 1, 1));
+            ((PdfDictionary)measure.MeasureObject.Value).Subclass = PdfObjectClass.View3D;
+
+            var ex = RequireThrows(() => measure.SetText("broken"));
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidU3DData, "3D measure subclass validation");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var page = pdf.AddPage();
+            var contentStream = page.NewContentStream();
+            ((PdfStreamObject)contentStream.StreamObject.Value).Subclass = PdfObjectClass.XObject;
+
+            var ex = RequireThrows(contentStream.ValidateOrThrow);
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidStream, "Content stream subclass validation");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var page = pdf.AddPage();
+            var annotation = page.CreateProjectionAnnotation(new PdfRect(0, 0, 10, 10), "projection");
+            var exData = page.Create3DAnnotExData();
+            ((PdfDictionary)exData.ExDataObject.Value).Subclass = PdfObjectClass.Annotation;
+
+            var ex = RequireThrows(() => annotation.SetExData(exData));
+            RequireDocumentStatus(pdf, ex, HaruStatus.InvalidObject, "ExData subclass validation");
+        }
+    }
+
     private static void DocumentResourceValidatorsRejectInvalidObjects()
     {
         using (var pdf = PdfDocument.New())
@@ -349,5 +464,11 @@ public static class ObjectSemantics
     {
         if (!condition)
             throw new InvalidOperationException(message);
+    }
+
+    private static void RequireDocumentStatus(PdfDocument pdf, HaruException ex, uint expected, string message)
+    {
+        Require(ex.Status == expected, $"{message} raised the wrong status.");
+        Require(pdf.GetError() == expected, $"{message} did not set the document error.");
     }
 }

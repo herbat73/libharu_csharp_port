@@ -4,6 +4,7 @@ internal enum PdfFontProgramKind
 {
     Type1,
     TrueType,
+    OpenTypeCff,
     CidType0
 }
 
@@ -242,16 +243,29 @@ internal sealed record PdfFontDescriptor(
 
 internal sealed class PdfFontFile
 {
-    internal PdfFontFile(string descriptorKey, byte[] data, int length1, int length2, int length3)
+    internal PdfFontFile(
+        string descriptorKey,
+        byte[] data,
+        int length1,
+        int length2,
+        int length3,
+        string? subtype = null,
+        bool writesLengthEntries = true)
     {
         DescriptorKey = descriptorKey;
         Data = data;
         Length1 = length1;
         Length2 = length2;
         Length3 = length3;
+        Subtype = subtype;
+        WritesLengthEntries = writesLengthEntries;
     }
 
     internal string DescriptorKey { get; }
+
+    internal string? Subtype { get; }
+
+    internal bool WritesLengthEntries { get; }
 
     internal byte[] Data { get; private set; }
 

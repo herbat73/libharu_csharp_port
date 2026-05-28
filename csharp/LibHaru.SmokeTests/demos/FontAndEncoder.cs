@@ -18,6 +18,7 @@ public static class FontAndEncoder
         var ttName = HPDF_LoadTTFontFromFile(pdf, ttPath, embedding: true);
         var tt = HPDF_GetFont(pdf, ttName, "WinAnsiEncoding");
         var ttUtf = HPDF_GetFont(pdf, ttName, "UTF-8");
+        var ttVertical = HPDF_GetFont(pdf, ttName, "Identity-V");
         var supplementaryUtf = TryLoadSupplementaryCMapFont(pdf);
         var ttSourceLength = new FileInfo(ttPath).Length;
 
@@ -28,6 +29,10 @@ public static class FontAndEncoder
         Require(HPDF_Font_GetUnicodeWidth(tt, 'A') > 0, "TrueType cmap/hmtx width lookup failed.");
         Require(HPDF_Font_GetAscent(tt) > 0, "TrueType hhea ascent was not parsed.");
         Require(HPDF_Font_GetEncodingName(ttUtf) == "UTF-8", "UTF encoder name was not retained.");
+        Require(HPDF_Font_GetEncodingName(ttVertical) == "Identity-V", "Vertical Identity encoder name was not retained.");
+        var verticalAdvance = (uint)Math.Max(0, (int)Math.Round(ttVertical.BBox.Top - ttVertical.BBox.Bottom));
+        var verticalTextWidth = HPDF_Font_TextWidth(ttVertical, "AV");
+        Require(verticalTextWidth.NumChars == 2 && verticalTextWidth.Width == verticalAdvance * 2, "Vertical TrueType text width did not use DW2 displacement metrics.");
 
         var page = HPDF_AddPage(pdf);
         HPDF_Page_SetFontAndSize(page, type1, 18);
@@ -39,10 +44,13 @@ public static class FontAndEncoder
         HPDF_Page_SetFontAndSize(page, ttUtf, 18);
         HPDF_Page_TextOut(page, 48, HPDF_Page_GetHeight(page) - 148, "Type0 CID UTF text path");
 
+        HPDF_Page_SetFontAndSize(page, ttVertical, 18);
+        HPDF_Page_TextOut(page, 48, HPDF_Page_GetHeight(page) - 186, "AV");
+
         if (supplementaryUtf is not null)
         {
             HPDF_Page_SetFontAndSize(page, supplementaryUtf, 18);
-            HPDF_Page_TextOut(page, 48, HPDF_Page_GetHeight(page) - 186, "Supplementary cmap: \U0001F600");
+            HPDF_Page_TextOut(page, 48, HPDF_Page_GetHeight(page) - 224, "Supplementary cmap: \U0001F600");
         }
 
         HPDF_SaveToFile(pdf, pdfPath);
@@ -56,6 +64,8 @@ public static class FontAndEncoder
         Require(latin1.Contains("/Subtype /Type0", StringComparison.Ordinal), "Missing Type0 composite font dictionary.");
         Require(latin1.Contains("/Subtype /CIDFontType2", StringComparison.Ordinal), "Missing CIDFontType2 descendant font.");
         Require(latin1.Contains("/Encoding /Identity-H", StringComparison.Ordinal), "Missing Identity-H CMap encoding.");
+        Require(latin1.Contains("/Encoding /Identity-V", StringComparison.Ordinal), "Missing Identity-V CMap encoding.");
+        Require(latin1.Contains($"/DW2 [{(int)Math.Round(ttVertical.BBox.Bottom)} {(int)Math.Round(ttVertical.BBox.Bottom - ttVertical.BBox.Top)}]", StringComparison.Ordinal), "Missing TrueType CID vertical metrics.");
         Require(latin1.Contains("/ToUnicode", StringComparison.Ordinal), "Missing ToUnicode CMap.");
         Require(latin1.Contains("/CIDToGIDMap ", StringComparison.Ordinal), "Missing explicit CIDToGIDMap stream.");
         Require(!latin1.Contains("/CIDToGIDMap /Identity", StringComparison.Ordinal), "Composite TrueType font should use a remapped CIDToGIDMap stream.");

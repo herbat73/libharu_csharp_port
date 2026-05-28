@@ -10,6 +10,9 @@ internal static class TrueTypeFontLoader
     private const int FontScript = 8;
     private const int FontStdCharset = 32;
     private const int FontItalic = 64;
+    private const uint SfntVersionTrueType = 0x00010000;
+    private const uint SfntVersionAppleTrueType = 0x74727565;
+    private const uint SfntVersionOpenTypeCff = 0x4F54544F;
 
     internal static PdfFontProgram Load(byte[] data, bool embedding, int collectionIndex = 0)
     {
@@ -17,7 +20,12 @@ internal static class TrueTypeFontLoader
             throw new HaruException(HaruStatus.TtfInvalidFormat, "TrueType font data is too short.");
 
         var faceOffset = ResolveFaceOffset(data, collectionIndex);
-        var tables = ReadTableDirectory(data, faceOffset);
+        var sfntVersion = ReadUInt32(data, faceOffset);
+        var tables = ReadTableDirectory(data, faceOffset, sfntVersion);
+        var isOpenTypeCff = sfntVersion == SfntVersionOpenTypeCff;
+        if (isOpenTypeCff && !tables.ContainsKey("CFF "))
+            throw new HaruException(HaruStatus.TtfMissingTable, "OpenType/CFF font is missing the CFF table.");
+
         var head = Required(tables, "head", HaruStatus.TtfMissingTable);
         var hhea = Required(tables, "hhea", HaruStatus.TtfMissingTable);
         var maxp = Required(tables, "maxp", HaruStatus.TtfMissingTable);
@@ -105,23 +113,52 @@ internal static class TrueTypeFontLoader
             Math.Max(50, averageWidth / 5),
             missingWidth);
 
-        Func<PdfFontSubsetRequest, PdfFontSubsetData>? fontFileSubsetBuilder = embedding
+        Func<PdfFontSubsetRequest, PdfFontSubsetData>? fontFileSubsetBuilder = embedding && !isOpenTypeCff
             ? request => CreateSubsetFontFile(data, faceOffset, tables, numGlyphs, numHMetrics, request)
             : null;
-        var fontFileData = fontFileSubsetBuilder?.Invoke(new PdfFontSubsetRequest([0], new Dictionary<int, int>()));
-        var fontFile = fontFileData is not null
-            ? new PdfFontFile("FontFile2", fontFileData.Data, fontFileData.Data.Length, 0, 0)
-            : null;
+        var fontFile = CreateFontFile(data, faceOffset, tables, embedding, isOpenTypeCff, fontFileSubsetBuilder);
 
         return new PdfFontProgram(
-            PdfFontProgramKind.TrueType,
+            isOpenTypeCff ? PdfFontProgramKind.OpenTypeCff : PdfFontProgramKind.TrueType,
             baseFont,
             descriptor,
             unicodeWidthResolver: UnicodeWidth,
-            glyphIdResolver: GlyphId,
-            glyphWidthResolver: GlyphWidth,
+            glyphIdResolver: isOpenTypeCff ? null : GlyphId,
+            glyphWidthResolver: isOpenTypeCff ? null : GlyphWidth,
             fontFile: fontFile,
-            fontFileSubsetBuilder: fontFileSubsetBuilder);
+            fontFileSubsetBuilder: fontFileSubsetBuilder,
+            cidVerticalPosition: yMin,
+            cidVerticalDisplacement: yMin - yMax);
+    }
+
+    private static PdfFontFile? CreateFontFile(
+        byte[] data,
+        int faceOffset,
+        Dictionary<string, TtfTable> tables,
+        bool embedding,
+        bool isOpenTypeCff,
+        Func<PdfFontSubsetRequest, PdfFontSubsetData>? fontFileSubsetBuilder)
+    {
+        if (!embedding)
+            return null;
+
+        if (isOpenTypeCff)
+        {
+            var fontData = BuildStandaloneFontFile(data, faceOffset, tables);
+            return new PdfFontFile(
+                "FontFile3",
+                fontData,
+                fontData.Length,
+                0,
+                0,
+                subtype: "OpenType",
+                writesLengthEntries: false);
+        }
+
+        var fontFileData = fontFileSubsetBuilder?.Invoke(new PdfFontSubsetRequest([0], new Dictionary<int, int>()));
+        return fontFileData is not null
+            ? new PdfFontFile("FontFile2", fontFileData.Data, fontFileData.Data.Length, 0, 0)
+            : null;
     }
 
     private static int ResolveFaceOffset(byte[] data, int collectionIndex)
@@ -148,11 +185,10 @@ internal static class TrueTypeFontLoader
         return offset;
     }
 
-    private static Dictionary<string, TtfTable> ReadTableDirectory(byte[] data, int faceOffset)
+    private static Dictionary<string, TtfTable> ReadTableDirectory(byte[] data, int faceOffset, uint sfntVersion)
     {
-        var sfntVersion = ReadUInt32(data, faceOffset);
-        if (sfntVersion != 0x00010000 && sfntVersion != 0x74727565)
-            throw new HaruException(HaruStatus.UnsupportedFontType, "Only TrueType glyf fonts are supported in this migration slice.");
+        if (sfntVersion is not (SfntVersionTrueType or SfntVersionAppleTrueType or SfntVersionOpenTypeCff))
+            throw new HaruException(HaruStatus.UnsupportedFontType, "Only TrueType and OpenType/CFF SFNT fonts are supported.");
 
         var tableCount = ReadUInt16(data, faceOffset + 4);
         var recordsOffset = faceOffset + 12;
@@ -496,6 +532,18 @@ internal static class TrueTypeFontLoader
             return ReadUInt16(data, locaOffset + glyphId * 2) * 2;
 
         return checked((int)ReadUInt32(data, locaOffset + glyphId * 4));
+    }
+
+    private static byte[] BuildStandaloneFontFile(
+        byte[] data,
+        int faceOffset,
+        Dictionary<string, TtfTable> tables)
+    {
+        var tableData = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
+        foreach (var (tag, table) in tables)
+            tableData[tag] = CopyTable(data, table);
+
+        return BuildSfnt(data, faceOffset, tableData);
     }
 
     private static PdfFontSubsetData CreateSubsetFontFile(

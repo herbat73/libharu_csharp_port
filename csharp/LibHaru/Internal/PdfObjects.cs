@@ -33,7 +33,18 @@ internal enum PdfObjectClass
     ExtGStateReadOnly = 0x0B00,
     NameDictionary = 0x0C00,
     NameTree = 0x0D00,
-    Shading = 0x0E00
+    Shading = 0x0E00,
+    JavaScript = 0x0F00,
+    EmbeddedFile = 0x1000,
+    FileSpec = 0x1100,
+    OutputIntent = 0x1200,
+    IccProfile = 0x1300,
+    U3D = 0x1400,
+    View3D = 0x1500,
+    Node3D = 0x1600,
+    Measure3D = 0x1700,
+    ExData = 0x1800,
+    ContentStream = 0x1900
 }
 
 internal static class PdfObjectLimits

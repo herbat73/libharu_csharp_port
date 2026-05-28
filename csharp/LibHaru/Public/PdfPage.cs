@@ -869,7 +869,7 @@ public sealed class PdfPage
 
     public PdfContentStream NewContentStream()
     {
-        var streamObject = Owner.AddObject(new PdfStreamObject([]));
+        var streamObject = Owner.AddObject(new PdfStreamObject([]) { Subclass = PdfObjectClass.ContentStream });
         _contents = new MemoryStream();
         var contentStream = new PdfContentStream(Owner, streamObject, _contents);
         _contentStreams.Add(contentStream);
@@ -1040,7 +1040,7 @@ public sealed class PdfPage
 
     public PdfExData Create3DAnnotExData()
     {
-        var exData = new PdfDictionary();
+        var exData = new PdfDictionary { Subclass = PdfObjectClass.ExData };
         exData.SetName("Type", "ExData");
         exData.SetName("Subtype", "3DM");
         return new PdfExData(Owner, Owner.AddObject(exData));
