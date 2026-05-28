@@ -18,19 +18,20 @@ dotnet build ..\LibHaruSharp.sln
 dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj
 ```
 
-The smoke test writes `artifacts/libharu-managed-smoke.pdf`.
+The smoke test writes `artifacts/libharu-managed-smoke.pdf` and companion coverage PDFs under `artifacts`.
 Compatibility demo ports write generated PDFs and `.structure.txt` regression profiles under `artifacts/compatibility-demos`.
+Checked-in font and image fixtures write generated coverage PDFs under `artifacts/font-fixtures` and `artifacts/image-fixtures`.
 When Poppler `pdftoppm` is available, selected first-page renders are checked against `csharp/LibHaru.SmokeTests/fixtures/visual-reference.tsv` and write pixel profiles under `artifacts/rendered`. Set `LIBHARU_PDFTOPPM` to a `pdftoppm` executable or containing directory when it is not on `PATH`; set `LIBHARU_REFRESH_VISUAL_REFERENCES=1` to refresh the TSV from current renders.
 Exact upstream/reference PDF comparisons are manifest-driven through `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv`; rows can assert byte-for-byte generated matches, generated SHA-256 hashes, or checked-in upstream C-output SHA-256 hashes.
 
 ## Current Managed Slice
 
-Status: the checked-in C headers, source modules, bundled fixtures, canonical PDF demos, reference-output hashes, and Poppler visual profiles have managed coverage. No fixture-gated migration items remain open for the current checked-in tree.
+Status: the checked-in C headers, source modules, bundled fixtures, canonical PDF demos, reference-output hashes, and Poppler visual profiles have managed coverage. The current tree has no remaining migration task list.
 
 Verification on 2026-05-28:
 
 - `dotnet build ..\LibHaruSharp.sln` succeeded with 0 warnings and 0 errors.
-- `dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj` generated the managed smoke PDFs, 4 real-font fixture PDFs, 1 external image fixture PDF, 28 compatibility demo PDFs, and passed 41 generated-PDF structural reader checks.
+- `dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj` generated the managed smoke PDFs, 4 real-font fixture PDFs, 1 external image fixture PDF covering 4 image assets, 28 compatibility demo PDFs, and passed 41 generated-PDF structural reader checks.
 - The smoke harness checks 20 checked-in upstream C-output PDF SHA-256 fixture rows. No byte-identical managed/upstream exact-PDF rows are configured yet because the current managed outputs differ in metadata/object serialization from the canonical demo PDFs.
 - Optional Poppler visual render checks passed with portable Poppler `pdftoppm` 26.02.0 via `LIBHARU_PDFTOPPM`; 10 first-page visual reference profiles were refreshed.
 - The local `include/hpdf.h` exported `HPDF_*` function names were audited against the managed `HPdf` facade; all exported function names are represented.
@@ -55,9 +56,9 @@ Verification on 2026-05-28:
 - `demo/arc_demo.c`, `demo/attach.c`, `demo/character_map.c`, `demo/chfont_demo.c`, `demo/encoding_list.c`, `demo/encryption.c`, `demo/ext_gstate_demo.c`, `demo/font_demo.c`, `demo/grid_sheet.c`, `demo/image_demo.c`, `demo/jpeg_demo.c`, `demo/jpfont_demo.c`, `demo/line_demo.c`, `demo/link_annotation.c`, `demo/outline_demo.c`, `demo/outline_demo_jp.c`, `demo/pdf_a_conformance.c`, `demo/permission.c`, `demo/png_demo.c`, `demo/raw_image_demo.c`, `demo/slide_show_demo.c`, `demo/text_annotation.c`, `demo/text_demo.c`, `demo/text_demo2.c`, `demo/ttfont_demo.c`, and `demo/ttfont_demo_jp.c`: migrated as managed compatibility demo ports that run from the smoke app and generate structural PDF profiles for regression coverage. `demo/make_rawimage.c` is tracked in the generated inventory as a utility fixture generator rather than a PDF demo.
 - `bindings/c#`: intentionally not used as an implementation source. The managed `HPdf` facade has callable coverage for the exported function names in the local `include/hpdf.h` audit, with low-level handles represented by managed equivalents where appropriate.
 
-## Fixture-Gated Follow-up Work
+## Migration Status
 
-The local source migration is complete for the checked-in headers, C modules, and fixture assets. No open fixture-gated follow-up items remain for this tree.
+The local source migration is complete for the checked-in headers, C modules, demos, and fixture assets. Future work should be opened only when new upstream APIs or new external fixtures are added to the repository.
 
 ## Source Module Map
 
