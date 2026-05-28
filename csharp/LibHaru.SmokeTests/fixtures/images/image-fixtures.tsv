@@ -1,3 +1,5 @@
 # kind	path	width	height	colorSpace	bitsPerComponent	lineWidth	blackIs1	topIsFirst
-# raw	external-rgb.dat	32	32	DeviceRgb	8	-	-	-
-# ccitt	external-1bit.dat	128	64	DeviceGray	1	16	true	true
+jpeg	external-rgb.jpg	32	24	DeviceRgb	8	-	-	-
+png	external-rgb.png	32	24	DeviceRgb	8	-	-	-
+raw	external-rgb.raw	16	16	DeviceRgb	8	-	-	-
+ccitt	external-1bit.dat	32	16	DeviceGray	1	4	true	true
