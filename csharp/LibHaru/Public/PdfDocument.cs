@@ -7,6 +7,45 @@ namespace LibHaru;
 
 public sealed class PdfDocument : IDisposable
 {
+    private static readonly HashSet<string> PdfAProhibitedActionTypes = new(StringComparer.Ordinal)
+    {
+        "JavaScript",
+        "Launch",
+        "Sound",
+        "Movie",
+        "ResetForm",
+        "ImportData",
+        "Rendition",
+        "SubmitForm"
+    };
+
+    private static readonly HashSet<string> PdfAProhibitedMediaAnnotationSubtypes = new(StringComparer.Ordinal)
+    {
+        "Movie",
+        "RichMedia",
+        "Screen",
+        "Sound"
+    };
+
+    private static readonly string[] PdfAdditionalActionKeys =
+    [
+        "E",
+        "X",
+        "D",
+        "U",
+        "Fo",
+        "Bl",
+        "PO",
+        "PC",
+        "PV",
+        "PI",
+        "O",
+        "C",
+        "K",
+        "F",
+        "V"
+    ];
+
     private readonly List<PdfIndirectObject> _objects = [];
     private readonly List<PdfPage> _pages = [];
     private readonly List<PdfImage> _images = [];
@@ -1041,7 +1080,32 @@ public sealed class PdfDocument : IDisposable
         }
     }
 
-    public PdfImage LoadPngImageFromFile2(string fileName) => LoadPngImageFromFile(fileName);
+    public PdfImage LoadPngImageFromFile2(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            Throw(HaruStatus.MissingFileNameEntry, "File name cannot be empty.");
+
+        try
+        {
+            var fullPath = Path.GetFullPath(fileName);
+            var pngBytes = File.ReadAllBytes(fullPath);
+            var png = PngImageLoader.LoadMetadata(pngBytes, this);
+
+            if (png.RequiresImmediateImageData)
+                return RegisterPngImage(PngImageLoader.Load(pngBytes, this));
+
+            return RegisterPngImage(png, () => LoadDelayedPngImageData(fullPath, png), fullPath);
+        }
+        catch (HaruException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException or System.Security.SecurityException)
+        {
+            Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
+            throw;
+        }
+    }
 
     public PdfImage LoadPngImageFromMem(byte[] data)
     {
@@ -1049,8 +1113,27 @@ public sealed class PdfDocument : IDisposable
             Throw(HaruStatus.InvalidPngImage, "PNG data cannot be null.");
 
         var png = PngImageLoader.Load(data, this);
+        return RegisterPngImage(png);
+    }
+
+    private PdfImage RegisterPngImage(PngImageData png, Func<byte[]>? delayedDataProvider = null, string? delayedFileName = null)
+    {
         var colorSpaceObject = CreatePngColorSpaceObject(png);
-        var stream = CreateImageStream(png.ImageData, png.Width, png.Height, png.ColorSpace, png.BitsPerComponent, colorSpaceObject);
+        var stream = CreateImageStream(
+            delayedDataProvider is null ? png.ImageData : [],
+            png.Width,
+            png.Height,
+            png.ColorSpace,
+            png.BitsPerComponent,
+            colorSpaceObject);
+
+        if (delayedDataProvider is not null)
+        {
+            stream.SetDelayedData(delayedDataProvider);
+            var fileName = PdfString.FromText(delayedFileName ?? string.Empty);
+            fileName.IsHidden = true;
+            stream.Dictionary.Set("_FILE_NAME", fileName);
+        }
 
         if (!string.IsNullOrEmpty(png.ColorManagement?.RenderingIntent))
             stream.Dictionary.SetName("Intent", png.ColorManagement.RenderingIntent);
@@ -1066,6 +1149,72 @@ public sealed class PdfDocument : IDisposable
         }
 
         return RegisterImage(stream, png.Width, png.Height, png.BitsPerComponent, png.ColorSpace);
+    }
+
+    private byte[] LoadDelayedPngImageData(string fileName, PngImageData expected)
+    {
+        try
+        {
+            var actual = PngImageLoader.Load(File.ReadAllBytes(fileName), this);
+            ValidateDelayedPngCompatibility(expected, actual);
+            return actual.ImageData;
+        }
+        catch (HaruException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException or System.Security.SecurityException)
+        {
+            Throw(HaruStatus.FileOpenError, ex.Message, unchecked((uint)ex.HResult));
+            throw;
+        }
+    }
+
+    private void ValidateDelayedPngCompatibility(PngImageData expected, PngImageData actual)
+    {
+        if (actual.SoftMaskData is not null
+            || actual.Width != expected.Width
+            || actual.Height != expected.Height
+            || actual.BitsPerComponent != expected.BitsPerComponent
+            || actual.ColorSpace != expected.ColorSpace
+            || actual.IndexedHighValue != expected.IndexedHighValue
+            || !SameSequence(actual.ColorMask, expected.ColorMask)
+            || !SameSequence(actual.IndexedPalette, expected.IndexedPalette)
+            || !SamePngColorManagement(actual.ColorManagement, expected.ColorManagement))
+        {
+            Throw(HaruStatus.InvalidPngImage, "Delayed PNG file changed to an incompatible image format before write.");
+        }
+    }
+
+    private static bool SamePngColorManagement(PngColorManagementData? left, PngColorManagementData? right)
+    {
+        if (ReferenceEquals(left, right))
+            return true;
+
+        if (left is null || right is null)
+            return false;
+
+        return left.Gamma == right.Gamma
+            && left.Chromaticities == right.Chromaticities
+            && string.Equals(left.RenderingIntent, right.RenderingIntent, StringComparison.Ordinal)
+            && SameSequence(left.IccProfile, right.IccProfile);
+    }
+
+    private static bool SameSequence<T>(IReadOnlyList<T>? left, IReadOnlyList<T>? right)
+    {
+        if (ReferenceEquals(left, right))
+            return true;
+
+        if (left is null || right is null || left.Count != right.Count)
+            return false;
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (!EqualityComparer<T>.Default.Equals(left[i], right[i]))
+                return false;
+        }
+
+        return true;
     }
 
     public PdfImage LoadJpegImageFromFile(string fileName)
@@ -1922,6 +2071,9 @@ public sealed class PdfDocument : IDisposable
 
         if (_embeddedFiles.Count > 0)
         {
+            foreach (var embeddedFile in _embeddedFiles)
+                embeddedFile.ValidateOrThrow();
+
             names.Set("EmbeddedFiles", BuildNameTree(_embeddedFiles
                 .OrderBy(static file => file.Name, StringComparer.Ordinal)
                 .Select(static file => new KeyValuePair<string, PdfObject>(file.Name, file.FileSpecObject.Reference))));
@@ -1930,6 +2082,9 @@ public sealed class PdfDocument : IDisposable
 
         if (_namedJavaScripts.Count > 0)
         {
+            foreach (var javaScript in _namedJavaScripts.Values)
+                javaScript.ValidateOrThrow();
+
             names.Set("JavaScript", BuildNameTree(_namedJavaScripts.Select(static item =>
                 new KeyValuePair<string, PdfObject>(item.Key, item.Value.ScriptObject.Reference))));
             hasNames = true;
@@ -1992,6 +2147,9 @@ public sealed class PdfDocument : IDisposable
             return;
         }
 
+        foreach (var embeddedFile in _embeddedFiles)
+            embeddedFile.ValidateOrThrow();
+
         _catalogDictionary.Set("AF", new PdfArray(_embeddedFiles.Select(static file => file.FileSpecObject.Reference)));
     }
 
@@ -2002,6 +2160,9 @@ public sealed class PdfDocument : IDisposable
             _catalogDictionary.Remove("OutputIntents");
             return;
         }
+
+        foreach (var outputIntent in _outputIntents)
+            outputIntent.ValidateOrThrow();
 
         _catalogDictionary.Set("OutputIntents", new PdfArray(_outputIntents.Select(static intent => intent.IntentObject.Reference)));
     }
@@ -2018,6 +2179,7 @@ public sealed class PdfDocument : IDisposable
             Throw(HaruStatus.InvalidDocumentState, "PDF/A documents require at least one output intent.");
 
         ValidatePdfAOutputIntents();
+        ValidatePdfAActionAndMediaRestrictions();
 
         if (_embeddedFiles.Count > 0 && !PdfAAllowsAssociatedFiles(_pdfAType))
             Throw(HaruStatus.InvalidDocumentState, "Embedded files require PDF/A-3, PDF/A-4F, or PDF/A-4E conformance.");
@@ -2061,10 +2223,80 @@ public sealed class PdfDocument : IDisposable
             or PdfPdfAType.PdfA4E
             or PdfPdfAType.PdfA4F;
 
+    private void ValidatePdfAActionAndMediaRestrictions()
+    {
+        if (_namedJavaScripts.Count > 0)
+            Throw(HaruStatus.InvalidDocumentState, "PDF/A documents cannot contain named JavaScript.");
+
+        foreach (var obj in _objects)
+            ValidatePdfAObjectActionAndMediaRestrictions(obj.Value);
+    }
+
+    private void ValidatePdfAObjectActionAndMediaRestrictions(PdfObject obj)
+    {
+        var dictionary = obj switch
+        {
+            PdfStreamObject stream => stream.Dictionary,
+            PdfDictionary dict => dict,
+            _ => null
+        };
+
+        if (dictionary is null)
+            return;
+
+        var type = dictionary.Get<PdfName>("Type");
+        var subtype = dictionary.Get<PdfName>("Subtype");
+
+        if (type?.Value == "Annot" && subtype is not null && PdfAProhibitsAnnotationSubtype(subtype.Value, _pdfAType))
+            Throw(HaruStatus.InvalidDocumentState, $"PDF/A documents cannot contain {subtype.Value} annotations.");
+
+        ValidatePdfAActionObject(dictionary.GetItem("A", PdfObjectClass.Any), allowActionArray: false);
+        ValidatePdfAActionObject(dictionary.GetItem("OpenAction", PdfObjectClass.Any), allowActionArray: false);
+
+        if (dictionary.GetItem("AA", PdfObjectClass.Any) is PdfDictionary additionalActions)
+            ValidatePdfAAdditionalActions(additionalActions);
+    }
+
+    private void ValidatePdfAAdditionalActions(PdfDictionary additionalActions)
+    {
+        foreach (var key in PdfAdditionalActionKeys)
+            ValidatePdfAActionObject(additionalActions.GetItem(key, PdfObjectClass.Any), allowActionArray: false);
+    }
+
+    private void ValidatePdfAActionObject(PdfObject? action, bool allowActionArray)
+    {
+        switch (action)
+        {
+            case null:
+                return;
+            case PdfArray actions when allowActionArray:
+                for (var i = 0; i < actions.Count; i++)
+                    ValidatePdfAActionObject(actions.GetItem(i, PdfObjectClass.Any), allowActionArray: false);
+                return;
+            case PdfDictionary dictionary:
+                var actionType = dictionary.Get<PdfName>("S");
+                if (actionType is not null && PdfAProhibitedActionTypes.Contains(actionType.Value))
+                    Throw(HaruStatus.InvalidDocumentState, $"PDF/A documents cannot contain {actionType.Value} actions.");
+
+                ValidatePdfAActionObject(dictionary.GetItem("Next", PdfObjectClass.Any), allowActionArray: true);
+                return;
+        }
+    }
+
+    private static bool PdfAProhibitsAnnotationSubtype(string subtype, PdfPdfAType type)
+    {
+        if (subtype == "3D")
+            return type != PdfPdfAType.PdfA4E;
+
+        return PdfAProhibitedMediaAnnotationSubtypes.Contains(subtype);
+    }
+
     private void ValidatePdfAOutputIntents()
     {
         foreach (var outputIntent in _outputIntents)
         {
+            outputIntent.ValidateOrThrow();
+
             if (outputIntent.IntentObject.Value is not PdfDictionary dictionary)
             {
                 Throw(HaruStatus.InvalidObject, "PDF/A output intent must be a dictionary.");

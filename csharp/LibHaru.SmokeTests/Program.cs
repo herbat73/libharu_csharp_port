@@ -33,8 +33,16 @@ VisualRegression.TryRenderSmokePdfs(
     artifacts,
     Path.Combine(root.FullName, "csharp", "LibHaru.SmokeTests", "fixtures", "visual-reference.tsv"),
     pdfPath,
+    compressionPdfPath,
+    fontPdfPath,
     documentFeaturesPdfPath,
+    imageFeaturesPdfPath,
+    nameTreePdfPath,
+    Path.Combine(artifacts, "compatibility-demos", "compat-font-demo.pdf"),
+    Path.Combine(artifacts, "compatibility-demos", "compat-image-demo.pdf"),
+    Path.Combine(artifacts, "compatibility-demos", "compat-image-fixtures-demo.pdf"),
     Path.Combine(artifacts, "compatibility-demos", "compat-pdf-a-conformance-demo.pdf"));
+PdfStructuralReader.CheckGeneratedPdfs(artifacts);
 
 static void SmokeTest(string pdfPath)
 {

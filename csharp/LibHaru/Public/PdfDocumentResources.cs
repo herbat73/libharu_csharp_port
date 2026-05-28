@@ -18,11 +18,19 @@ public sealed class PdfJavaScript
 
     internal PdfDictionary CreateActionDictionary()
     {
+        ValidateOrThrow();
+
         var action = new PdfDictionary();
         action.SetName("Type", "Action");
         action.SetName("S", "JavaScript");
         action.Set("JS", ScriptObject.Reference);
         return action;
+    }
+
+    internal void ValidateOrThrow()
+    {
+        if (ScriptObject.Value is not PdfStreamObject)
+            throw Owner.CreateException(HaruStatus.InvalidObject, "JavaScript object must be a stream.");
     }
 }
 
@@ -57,6 +65,8 @@ public sealed class PdfEmbeddedFile
 
     public void SetName(string name)
     {
+        ValidateOrThrow();
+
         if (string.IsNullOrWhiteSpace(name))
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Embedded file name cannot be empty.");
 
@@ -65,10 +75,16 @@ public sealed class PdfEmbeddedFile
         _fileSpec.Set("UF", PdfString.FromText(name));
     }
 
-    public void SetDescription(string description) => _fileSpec.Set("Desc", PdfString.FromText(description ?? string.Empty));
+    public void SetDescription(string description)
+    {
+        ValidateOrThrow();
+        _fileSpec.Set("Desc", PdfString.FromText(description ?? string.Empty));
+    }
 
     public void SetSubtype(string subtype)
     {
+        ValidateOrThrow();
+
         if (string.IsNullOrWhiteSpace(subtype))
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Embedded file subtype cannot be empty.");
 
@@ -77,6 +93,8 @@ public sealed class PdfEmbeddedFile
 
     public void SetAFRelationship(PdfAFRelationship relationship)
     {
+        ValidateOrThrow();
+
         if (!Enum.IsDefined(relationship))
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Unknown AFRelationship value.");
 
@@ -96,15 +114,56 @@ public sealed class PdfEmbeddedFile
 
     public void SetSize(long size)
     {
+        ValidateOrThrow();
+
         if (size < 0 || size > int.MaxValue)
             throw Owner.CreateException(HaruStatus.InvalidParameter, "Embedded file size is out of range.");
 
         _params.Set("Size", new PdfInteger((int)size));
     }
 
-    public void SetCreationDate(DateTimeOffset value) => _params.Set("CreationDate", PdfString.FromText(PdfDocument.FormatPdfDate(value)));
+    public void SetCreationDate(DateTimeOffset value)
+    {
+        ValidateOrThrow();
+        _params.Set("CreationDate", PdfString.FromText(PdfDocument.FormatPdfDate(value)));
+    }
 
-    public void SetLastModificationDate(DateTimeOffset value) => _params.Set("ModDate", PdfString.FromText(PdfDocument.FormatPdfDate(value)));
+    public void SetLastModificationDate(DateTimeOffset value)
+    {
+        ValidateOrThrow();
+        _params.Set("ModDate", PdfString.FromText(PdfDocument.FormatPdfDate(value)));
+    }
+
+    internal void ValidateOrThrow()
+    {
+        if (!ReferenceEquals(FileSpecObject.Value, _fileSpec))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Embedded file filespec object is invalid.");
+
+        if (FileStreamObject.Value is not PdfStreamObject stream || !ReferenceEquals(stream.Dictionary, _fileStreamDictionary))
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Embedded file stream object is invalid.");
+
+        try
+        {
+            var type = _fileSpec.Get<PdfName>("Type");
+            var ef = _fileSpec.Get<PdfDictionary>("EF");
+            var fileStream = ef?.GetItem("F", PdfObjectClass.Dictionary);
+            var streamType = _fileStreamDictionary.Get<PdfName>("Type");
+            var parameters = _fileStreamDictionary.Get<PdfDictionary>("Params");
+
+            if (type?.Value != "Filespec"
+                || ef is null
+                || !ReferenceEquals(fileStream, stream)
+                || streamType?.Value != "EmbeddedFile"
+                || !ReferenceEquals(parameters, _params))
+            {
+                throw Owner.CreateException(HaruStatus.InvalidObject, "Embedded file dictionary entries are invalid.");
+            }
+        }
+        catch (HaruException ex) when (ex.Status != HaruStatus.InvalidObject)
+        {
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Embedded file dictionary entries are invalid.", ex.Status);
+        }
+    }
 }
 
 public sealed class PdfExtGState
@@ -451,6 +510,8 @@ public sealed class Pdf3DView
 
     public void SetLighting(string scheme)
     {
+        ValidateOrThrow();
+
         if (string.IsNullOrWhiteSpace(scheme))
             throw Owner.CreateException(HaruStatus.InvalidParameter, "3D lighting scheme cannot be empty.");
 
@@ -468,6 +529,8 @@ public sealed class Pdf3DView
 
     public void SetBackgroundColor(double r, double g, double b)
     {
+        ValidateOrThrow();
+
         ValidateUnit(r, nameof(r));
         ValidateUnit(g, nameof(g));
         ValidateUnit(b, nameof(b));
@@ -480,6 +543,8 @@ public sealed class Pdf3DView
 
     public void SetPerspectiveProjection(double fieldOfView)
     {
+        ValidateOrThrow();
+
         if (fieldOfView is < 0 or > 180 || double.IsNaN(fieldOfView) || double.IsInfinity(fieldOfView))
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "Perspective field of view must be between 0 and 180.");
 
@@ -492,6 +557,8 @@ public sealed class Pdf3DView
 
     public void SetOrthogonalProjection(double magnification)
     {
+        ValidateOrThrow();
+
         if (magnification <= 0 || double.IsNaN(magnification) || double.IsInfinity(magnification))
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "Orthogonal projection magnification must be positive.");
 
@@ -503,6 +570,8 @@ public sealed class Pdf3DView
 
     public void SetCamera(double centerX, double centerY, double centerZ, double cameraDirectionX, double cameraDirectionY, double cameraDirectionZ, double orbitRadius, double roll)
     {
+        ValidateOrThrow();
+
         var viewX = -cameraDirectionX;
         var viewY = -cameraDirectionY;
         var viewZ = -cameraDirectionZ;
@@ -563,6 +632,8 @@ public sealed class Pdf3DView
 
     public void SetCameraByMatrix(Pdf3DMatrix matrix, double cameraOrbit)
     {
+        ValidateOrThrow();
+
         if (cameraOrbit < 0 || double.IsNaN(cameraOrbit) || double.IsInfinity(cameraOrbit))
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "Camera orbit must be non-negative.");
 
@@ -603,6 +674,8 @@ public sealed class Pdf3DView
 
     public void SetCrossSectionOn(PdfPoint3D center, double roll, double pitch, double opacity, bool showIntersection)
     {
+        ValidateOrThrow();
+
         ValidateUnit(opacity, nameof(opacity));
 
         var crossSection = new PdfDictionary();
@@ -615,7 +688,11 @@ public sealed class Pdf3DView
         _dictionary.Set("SA", new PdfArray([crossSection]));
     }
 
-    public void SetCrossSectionOff() => _dictionary.Set("SA", new PdfArray());
+    public void SetCrossSectionOff()
+    {
+        ValidateOrThrow();
+        _dictionary.Set("SA", new PdfArray());
+    }
 
     internal void ValidateOrThrow()
     {
@@ -685,16 +762,24 @@ public sealed class Pdf3DNode
 
     public void SetOpacity(double opacity)
     {
+        ValidateOrThrow();
+
         if (opacity is < 0 or > 1 || double.IsNaN(opacity) || double.IsInfinity(opacity))
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D node opacity must be between 0 and 1.");
 
         Dictionary.Set("O", new PdfReal(opacity));
     }
 
-    public void SetVisibility(bool visible) => Dictionary.Set("V", new PdfBoolean(visible));
+    public void SetVisibility(bool visible)
+    {
+        ValidateOrThrow();
+        Dictionary.Set("V", new PdfBoolean(visible));
+    }
 
     public void SetMatrix(Pdf3DMatrix matrix)
     {
+        ValidateOrThrow();
+
         Dictionary.Set("M", new PdfArray([
             new PdfReal(matrix.A),
             new PdfReal(matrix.B),
@@ -737,25 +822,44 @@ public sealed class Pdf3DMeasure
 
     internal PdfDictionary Dictionary { get; }
 
-    public void SetColor(PdfRgbColor color) =>
+    public void SetColor(PdfRgbColor color)
+    {
+        ValidateOrThrow();
         Dictionary.Set("C", new PdfArray([new PdfName("DeviceRGB"), new PdfReal(color.R), new PdfReal(color.G), new PdfReal(color.B)]));
+    }
 
     public void SetTextSize(double textSize)
     {
+        ValidateOrThrow();
+
         if (textSize <= 0 || double.IsNaN(textSize) || double.IsInfinity(textSize))
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D measure text size must be positive.");
 
         Dictionary.Set("TS", new PdfReal(textSize));
     }
 
-    public void SetName(string name) => Dictionary.Set("TRL", PdfString.FromText(name ?? string.Empty));
+    public void SetName(string name)
+    {
+        ValidateOrThrow();
+        Dictionary.Set("TRL", PdfString.FromText(name ?? string.Empty));
+    }
 
-    public void SetTextBoxSize(int x, int y) => Dictionary.Set("TB", new PdfArray([new PdfInteger(x), new PdfInteger(y)]));
+    public void SetTextBoxSize(int x, int y)
+    {
+        ValidateOrThrow();
+        Dictionary.Set("TB", new PdfArray([new PdfInteger(x), new PdfInteger(y)]));
+    }
 
-    public void SetText(string text) => Dictionary.Set("UT", PdfString.FromText(text ?? string.Empty));
+    public void SetText(string text)
+    {
+        ValidateOrThrow();
+        Dictionary.Set("UT", PdfString.FromText(text ?? string.Empty));
+    }
 
     public void SetProjectionAnnotation(PdfAnnotation projectionAnnotation)
     {
+        ValidateOrThrow();
+
         if (projectionAnnotation is null || !ReferenceEquals(projectionAnnotation.Owner, Owner))
             throw Owner.CreateException(HaruStatus.InvalidAnnotation, "Projection annotation does not belong to this document.");
 
@@ -784,6 +888,26 @@ public sealed class PdfOutputIntent
     internal PdfDocument Owner { get; }
 
     internal PdfIndirectObject IntentObject { get; }
+
+    internal void ValidateOrThrow()
+    {
+        if (IntentObject.Value is not PdfDictionary dictionary)
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Output intent object must be a dictionary.");
+
+        try
+        {
+            var type = dictionary.Get<PdfName>("Type");
+            var subtype = dictionary.Get<PdfName>("S");
+            var profile = dictionary.GetItem("DestOutputProfile", PdfObjectClass.Dictionary);
+
+            if (type?.Value != "OutputIntent" || subtype?.Value != "GTS_PDFA1" || profile is not PdfStreamObject)
+                throw Owner.CreateException(HaruStatus.InvalidObject, "Output intent dictionary entries are invalid.");
+        }
+        catch (HaruException ex) when (ex.Status != HaruStatus.InvalidObject)
+        {
+            throw Owner.CreateException(HaruStatus.InvalidObject, "Output intent dictionary entries are invalid.", ex.Status);
+        }
+    }
 }
 
 public sealed class PdfFontDef
@@ -843,14 +967,34 @@ public sealed class PdfExData
 
     public void Set3DMeasurement(Pdf3DMeasure measure)
     {
+        ValidateOrThrow();
+
         if (measure is null || !ReferenceEquals(measure.Owner, Owner))
             throw Owner.CreateException(HaruStatus.InvalidU3DData, "3D measure does not belong to this document.");
 
         measure.ValidateOrThrow();
+        var dictionary = (PdfDictionary)ExDataObject.Value;
+
+        dictionary.Set("M3DREF", measure.MeasureObject.Reference);
+    }
+
+    internal void ValidateOrThrow()
+    {
         if (ExDataObject.Value is not PdfDictionary dictionary)
             throw Owner.CreateException(HaruStatus.InvalidObject, "External data object must be a dictionary.");
 
-        dictionary.Set("M3DREF", measure.MeasureObject.Reference);
+        try
+        {
+            var type = dictionary.Get<PdfName>("Type");
+            var subtype = dictionary.Get<PdfName>("Subtype");
+
+            if (type?.Value != "ExData" || subtype?.Value != "3DM")
+                throw Owner.CreateException(HaruStatus.InvalidObject, "External data Type/Subtype entries are invalid.");
+        }
+        catch (HaruException ex) when (ex.Status != HaruStatus.InvalidObject)
+        {
+            throw Owner.CreateException(HaruStatus.InvalidObject, "External data Type/Subtype entries are invalid.", ex.Status);
+        }
     }
 }
 

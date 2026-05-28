@@ -48,9 +48,13 @@ public static class DocumentFeatures
 
         var highlight = HPDF_Page_CreateHighlightAnnot(page, new PdfRect(45, 660, 240, 680), "Highlight annotation");
         HPDF_TextMarkupAnnot_SetQuadPoints(highlight, new PdfPoint(45, 660), new PdfPoint(240, 660), new PdfPoint(240, 680), new PdfPoint(45, 680));
+        var highlightPopup = HPDF_Page_CreatePopupAnnot(page, new PdfRect(45, 685, 240, 735), highlight);
+        HPDF_MarkupAnnot_SetPopup(highlight, highlightPopup);
 
         var freeText = HPDF_Page_CreateFreeTextAnnot(page, new PdfRect(270, 645, 430, 680), "Callout annotation");
         HPDF_FreeTextAnnot_SetDefaultStyle(freeText, "font: Helvetica 10pt; color: #003366");
+        HPDF_MarkupAnnot_SetTransparency(freeText, 0.4);
+        HPDF_MarkupAnnot_SetIntent(freeText, PdfAnnotIntent.FreeTextCallout);
         HPDF_FreeTextAnnot_Set3PointCalloutLine(freeText, new PdfPoint(270, 645), new PdfPoint(250, 625), new PdfPoint(230, 650));
         HPDF_FreeTextAnnot_SetLineEndingStyle(freeText, PdfAnnotLineEndingStyle.OpenArrow, PdfAnnotLineEndingStyle.None);
         HPDF_Annot_SetAppearance(
@@ -59,6 +63,10 @@ public static class DocumentFeatures
             "0.95 g 0 0 140 30 re f BT /Helv 10 Tf 4 11 Td (Callout AP) Tj ET",
             new PdfRect(0, 0, 140, 30),
             fonts: new Dictionary<string, PdfFont> { ["Helv"] = font });
+
+        var freeText2 = HPDF_Page_CreateFreeTextAnnot(page, new PdfRect(445, 645, 560, 680), "2-point callout");
+        HPDF_FreeTextAnnot_Set2PointCalloutLine(freeText2, new PdfPoint(445, 645), new PdfPoint(420, 625));
+        HPDF_FreeTextAnnot_SetLineEndingStyle(freeText2, PdfAnnotLineEndingStyle.None, PdfAnnotLineEndingStyle.OpenArrow);
 
         var lineAnnot = HPDF_Page_CreateLineAnnot(page, new PdfRect(45, 615, 240, 640), "Line annotation", null, new PdfPoint(50, 620), new PdfPoint(230, 635));
         HPDF_LineAnnot_SetPosition(lineAnnot, new PdfPoint(50, 620), PdfAnnotLineEndingStyle.OpenArrow, new PdfPoint(230, 635), PdfAnnotLineEndingStyle.ClosedArrow);
@@ -69,6 +77,14 @@ public static class DocumentFeatures
         HPDF_MarkupAnnot_SetInteriorRGBColor(square, new PdfRgbColor(0.9, 0.95, 1));
         HPDF_MarkupAnnot_SetCloudEffect(square, 2);
         HPDF_MarkupAnnot_SetRectDiff(square, new PdfRect(2, 2, 2, 2));
+
+        var circle = HPDF_Page_CreateCircleAnnot(page, new PdfRect(270, 560, 330, 590), "Circle annotation");
+        HPDF_MarkupAnnot_SetInteriorCMYKColor(circle, new PdfCmykColor(0.1, 0.2, 0, 0));
+        var grayCircle = HPDF_Page_CreateCircleAnnot(page, new PdfRect(340, 560, 400, 590), "Gray circle annotation");
+        HPDF_MarkupAnnot_SetInteriorGrayColor(grayCircle, 0.75);
+        var transparentCircle = HPDF_Page_CreateCircleAnnot(page, new PdfRect(410, 560, 470, 590), "Transparent circle annotation");
+        HPDF_MarkupAnnot_SetInteriorRGBColor(transparentCircle, new PdfRgbColor(1, 0.9, 0.2));
+        HPDF_MarkupAnnot_SetInteriorTransparent(transparentCircle);
 
         HPDF_Page_CreateStampAnnot(page, new PdfRect(350, 600, 450, 630), "Approved", "Approved stamp");
         var widget = HPDF_Page_CreateWidgetAnnot(page, new PdfRect(460, 600, 520, 630));
@@ -98,14 +114,6 @@ public static class DocumentFeatures
 
         var icc = File.ReadAllBytes(Path.Combine(repoRoot, "demo", "pdf_a", "device_rgb.icc"));
         HPDF_AppendOutputIntents(pdf, "sRGB", icc, "sRGB IEC61966-2.1");
-        HPDF_PDFA_SetPDFAConformance(pdf, PdfPdfAType.PdfA3B);
-        HPDF_AddPDFAXmpExtension(pdf, """
-            <rdf:Description rdf:about='' xmlns:fx='urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#'>
-              <fx:DocumentType>INVOICE</fx:DocumentType>
-              <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
-              <fx:Version>1.0</fx:Version>
-            </rdf:Description>
-            """);
 
         var state = HPDF_CreateExtGState(pdf);
         HPDF_ExtGState_SetAlphaStroke(state, 0.65);
@@ -185,9 +193,6 @@ public static class DocumentFeatures
         Require(latin1.Contains("/Dests", StringComparison.Ordinal), "Missing named destinations tree.");
         Require(latin1.Contains("/JavaScript", StringComparison.Ordinal), "Missing JavaScript entry.");
         Require(latin1.Contains("/EmbeddedFiles", StringComparison.Ordinal), "Missing embedded files name tree.");
-        Require(latin1.Contains("/MarkInfo", StringComparison.Ordinal), "Missing PDF/A MarkInfo.");
-        Require(latin1.Contains("/StructTreeRoot", StringComparison.Ordinal), "Missing PDF/A structure root.");
-        Require(latin1.Contains("/ID [", StringComparison.Ordinal), "Missing PDF/A trailer ID.");
         Require(latin1.Contains("/Type /Filespec", StringComparison.Ordinal), "Missing file specification.");
         Require(latin1.Contains("/AFRelationship /Data", StringComparison.Ordinal), "Missing AFRelationship.");
         Require(latin1.Contains("/OutputIntents", StringComparison.Ordinal), "Missing output intents.");
@@ -198,9 +203,15 @@ public static class DocumentFeatures
         Require(latin1.Contains("/Subtype /Popup", StringComparison.Ordinal), "Missing popup annotation.");
         Require(latin1.Contains("/Subtype /FreeText", StringComparison.Ordinal), "Missing free text annotation.");
         Require(latin1.Contains("/Subtype /Line", StringComparison.Ordinal), "Missing line annotation.");
+        Require(latin1.Contains("/Subtype /Circle", StringComparison.Ordinal), "Missing circle annotation.");
         Require(latin1.Contains("/Subtype /Stamp", StringComparison.Ordinal), "Missing stamp annotation.");
         Require(latin1.Contains("/Subtype /Projection", StringComparison.Ordinal), "Missing projection annotation.");
         Require(latin1.Contains("/Subtype /Widget", StringComparison.Ordinal), "Missing widget annotation.");
+        Require(latin1.Contains("/CA 0.4", StringComparison.Ordinal), "Missing annotation transparency.");
+        Require(latin1.Contains("/IT /FreeTextCallout", StringComparison.Ordinal), "Missing annotation intent.");
+        Require(latin1.Contains("/CL [", StringComparison.Ordinal), "Missing free-text callout line.");
+        Require(latin1.Contains("/LE [/None /OpenArrow]", StringComparison.Ordinal), "Missing 2-point callout line ending style.");
+        Require(Count(latin1, "/IC [") >= 3, "Missing interior color variants.");
         Require(latin1.Contains("/AP", StringComparison.Ordinal), "Missing annotation appearance dictionary.");
         Require(latin1.Contains("/Subtype /Form", StringComparison.Ordinal), "Missing appearance form XObject.");
         Require(latin1.Contains("/R <<", StringComparison.Ordinal), "Missing rollover appearance state.");
@@ -237,5 +248,19 @@ public static class DocumentFeatures
     {
         if (!condition)
             throw new InvalidOperationException(message);
+    }
+
+    private static int Count(string value, string needle)
+    {
+        var count = 0;
+        var index = 0;
+
+        while ((index = value.IndexOf(needle, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += needle.Length;
+        }
+
+        return count;
     }
 }

@@ -331,6 +331,7 @@ public sealed class PdfAnnotation
         if (exData is null || !ReferenceEquals(exData.Owner, Owner))
             throw Owner.CreateException(HaruStatus.InvalidObject, "External data does not belong to this document.");
 
+        exData.ValidateOrThrow();
         Dictionary.Set("ExData", exData.ExDataObject.Reference);
     }
 

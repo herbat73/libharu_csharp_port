@@ -58,6 +58,8 @@ public static class ImageFeatures
         var pngFileImage = HPDF_LoadPngImageFromFile(pdf, rgbPngPath);
         HPDF_Page_DrawImage(page, pngFileImage, 40, HPDF_Page_GetHeight(page) - 190, 48, 48);
 
+        VerifyDelayedPngFileLoading(Path.GetDirectoryName(pdfPath)!);
+
         var rgbaPng = CreatePng(2, 2, 8, 6, [
             255, 0, 0, 255, 0, 255, 0, 160,
             0, 0, 255, 80, 255, 255, 0, 0
@@ -96,9 +98,37 @@ public static class ImageFeatures
         var srgbImage = HPDF_LoadPngImageFromMem(pdf, srgbPng);
         Require(HPDF_Image_GetColorSpace(srgbImage) == "CalRGB", "sRGB PNG did not produce CalRGB.");
 
+        var ancillaryPng = CreatePng(
+            1,
+            1,
+            8,
+            2,
+            [64, 128, 192],
+            ancillaryChunks:
+            [
+                ("sBIT", [8, 8, 8]),
+                ("pHYs", PhysicalPixels(2_835, 2_835, 1)),
+                ("bKGD", TrueColorBackground(64, 128, 192)),
+                ("tEXt", Latin1Text("Title", "Ancillary smoke")),
+                ("zTXt", CompressedLatin1Text("Comment", "compressed ancillary")),
+                ("iTXt", InternationalText("Description", "international ancillary"))
+            ]);
+        var ancillaryImage = HPDF_LoadPngImageFromMem(pdf, ancillaryPng);
+        Require(HPDF_Image_Validate(ancillaryImage), "PNG ancillary chunk image failed validation.");
+
         var jpegPath = Path.Combine(repoRoot, "demo", "images", "rgb.jpg");
         var jpegImage = HPDF_LoadJpegImageFromFile(pdf, jpegPath);
         HPDF_Page_DrawImage(page, jpegImage, 220, HPDF_Page_GetHeight(page) - 190, 48, 48);
+
+        var grayJpegPath = Path.Combine(repoRoot, "demo", "images", "gray.jpg");
+        var grayJpegImage = HPDF_LoadJpegImageFromFile(pdf, grayJpegPath);
+        Require(HPDF_Image_GetColorSpace(grayJpegImage) == "DeviceGray", "Grayscale JPEG fixture color space mismatch.");
+        HPDF_Page_DrawImage(page, grayJpegImage, 280, HPDF_Page_GetHeight(page) - 190, 48, 48);
+
+        var maskFixturePath = Path.Combine(repoRoot, "demo", "pngsuite", "maskimage.png");
+        var maskFixtureImage = HPDF_LoadPngImageFromFile(pdf, maskFixturePath);
+        Require(HPDF_Image_Validate(maskFixtureImage), "PngSuite mask fixture failed validation.");
+        HPDF_Page_DrawImage(page, maskFixtureImage, 340, HPDF_Page_GetHeight(page) - 190, 48, 48);
 
         HPDF_Page_ExecuteXObject(page, jpegImage);
 
@@ -122,6 +152,14 @@ public static class ImageFeatures
         invalidPng[^1] ^= 0xFF;
         var invalidPngError = RequireHaruException(() => HPDF_LoadPngImageFromMem(pdf, invalidPng));
         Require(invalidPngError.Status == HaruStatus.InvalidPngImage, "Invalid PNG CRC raised the wrong status.");
+
+        var unknownCriticalPng = CreatePng(1, 1, 8, 2, [1, 2, 3], ancillaryChunks: [("VpAg", [0])]);
+        var unknownCriticalError = RequireHaruException(() => HPDF_LoadPngImageFromMem(pdf, unknownCriticalPng));
+        Require(unknownCriticalError.Status == HaruStatus.InvalidPngImage, "Unknown critical PNG chunk raised the wrong status.");
+
+        var invalidPhysicalPixelsPng = CreatePng(1, 1, 8, 2, [1, 2, 3], ancillaryChunks: [("pHYs", [0])]);
+        var invalidPhysicalPixelsError = RequireHaruException(() => HPDF_LoadPngImageFromMem(pdf, invalidPhysicalPixelsPng));
+        Require(invalidPhysicalPixelsError.Status == HaruStatus.InvalidPngImage, "Invalid PNG pHYs chunk raised the wrong status.");
 
         HPDF_SaveToFile(pdf, pdfPath);
 
@@ -148,6 +186,31 @@ public static class ImageFeatures
         Console.WriteLine($"{bytes.Length} bytes with image features");
     }
 
+    private static void VerifyDelayedPngFileLoading(string outputDirectory)
+    {
+        using var pdf = HPDF_New();
+        var page = HPDF_AddPage(pdf);
+        var pngPath = Path.Combine(outputDirectory, "image-delayed-file2.png");
+        var pdfPath = Path.Combine(outputDirectory, "image-delayed-file2.pdf");
+        byte[] initialPixel = [231, 17, 29];
+        byte[] updatedPixel = [37, 149, 213];
+
+        File.WriteAllBytes(pngPath, CreatePng(1, 1, 8, 2, initialPixel));
+        var image = HPDF_LoadPngImageFromFile2(pdf, pngPath);
+        Require(HPDF_Image_Validate(image), "Delayed PNG image validator failed.");
+
+        File.WriteAllBytes(pngPath, CreatePng(1, 1, 8, 2, updatedPixel));
+        HPDF_Page_DrawImage(page, image, 40, 40, 32, 32);
+        HPDF_SaveToFile(pdf, pdfPath);
+
+        var bytes = File.ReadAllBytes(pdfPath);
+        Require(ContainsSequence(bytes, updatedPixel), "Delayed PNG did not reload updated file data at save time.");
+        Require(!ContainsSequence(bytes, initialPixel), "Delayed PNG retained eagerly loaded image data.");
+
+        var latin1 = Encoding.Latin1.GetString(bytes);
+        Require(!latin1.Contains("_FILE_NAME", StringComparison.Ordinal), "Delayed PNG file marker leaked into PDF output.");
+    }
+
     private static byte[] CreatePng(
         int width,
         int height,
@@ -158,7 +221,8 @@ public static class ImageFeatures
         byte[]? transparency = null,
         uint? gamma = null,
         byte[]? chromaticities = null,
-        byte? srgbIntent = null)
+        byte? srgbIntent = null,
+        IReadOnlyList<(string Type, byte[] Data)>? ancillaryChunks = null)
     {
         var bitsPerPixel = colorType switch
         {
@@ -207,6 +271,12 @@ public static class ImageFeatures
         if (transparency is not null)
             WriteChunk(output, "tRNS", transparency);
 
+        if (ancillaryChunks is not null)
+        {
+            foreach (var (type, chunkData) in ancillaryChunks)
+                WriteChunk(output, type, chunkData);
+        }
+
         WriteChunk(output, "IDAT", Zlib(scanlines));
         WriteChunk(output, "IEND", ReadOnlySpan<byte>.Empty);
         return output.ToArray();
@@ -226,10 +296,67 @@ public static class ImageFeatures
         return output.ToArray();
     }
 
+    private static byte[] PhysicalPixels(uint xPixelsPerUnit, uint yPixelsPerUnit, byte unit)
+    {
+        using var output = new MemoryStream();
+        WriteUInt32(output, xPixelsPerUnit);
+        WriteUInt32(output, yPixelsPerUnit);
+        output.WriteByte(unit);
+        return output.ToArray();
+    }
+
+    private static byte[] TrueColorBackground(ushort red, ushort green, ushort blue)
+    {
+        using var output = new MemoryStream();
+        WriteUInt16(output, red);
+        WriteUInt16(output, green);
+        WriteUInt16(output, blue);
+        return output.ToArray();
+    }
+
+    private static byte[] Latin1Text(string keyword, string text)
+    {
+        using var output = new MemoryStream();
+        output.Write(Encoding.Latin1.GetBytes(keyword));
+        output.WriteByte(0);
+        output.Write(Encoding.Latin1.GetBytes(text));
+        return output.ToArray();
+    }
+
+    private static byte[] CompressedLatin1Text(string keyword, string text)
+    {
+        using var output = new MemoryStream();
+        output.Write(Encoding.Latin1.GetBytes(keyword));
+        output.WriteByte(0);
+        output.WriteByte(0);
+        output.Write(Zlib(Encoding.Latin1.GetBytes(text)));
+        return output.ToArray();
+    }
+
+    private static byte[] InternationalText(string keyword, string text)
+    {
+        using var output = new MemoryStream();
+        output.Write(Encoding.Latin1.GetBytes(keyword));
+        output.WriteByte(0);
+        output.WriteByte(0);
+        output.WriteByte(0);
+        output.WriteByte(0);
+        output.WriteByte(0);
+        output.Write(Encoding.UTF8.GetBytes(text));
+        return output.ToArray();
+    }
+
     private static void WriteUInt32(Stream output, uint value)
     {
         Span<byte> buffer = stackalloc byte[4];
         BinaryPrimitives.WriteUInt32BigEndian(buffer, value);
+        output.Write(buffer);
+    }
+
+    private static void WriteUInt16(Stream output, ushort value)
+    {
+        Span<byte> buffer = stackalloc byte[2];
+        BinaryPrimitives.WriteUInt16BigEndian(buffer, value);
         output.Write(buffer);
     }
 
@@ -271,6 +398,30 @@ public static class ImageFeatures
         }
 
         return ~crc;
+    }
+
+    private static bool ContainsSequence(byte[] haystack, byte[] needle)
+    {
+        if (needle.Length == 0)
+            return true;
+
+        for (var i = 0; i <= haystack.Length - needle.Length; i++)
+        {
+            var found = true;
+            for (var j = 0; j < needle.Length; j++)
+            {
+                if (haystack[i + j] != needle[j])
+                {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found)
+                return true;
+        }
+
+        return false;
     }
 
     private static void Require(bool condition, string message)

@@ -738,6 +738,8 @@ internal sealed class PdfDictionary : PdfObject
 internal sealed class PdfStreamObject : PdfObject
 {
     private byte[] _data;
+    private Func<byte[]>? _delayedDataProvider;
+    private bool _clearDelayedDataAfterWrite;
 
     internal PdfStreamObject(byte[] data)
     {
@@ -759,7 +761,19 @@ internal sealed class PdfStreamObject : PdfObject
 
     internal override PdfObjectClass ObjectClass => PdfObjectClass.Dictionary | Subclass;
 
-    internal void SetData(byte[] data) => _data = data;
+    internal void SetData(byte[] data)
+    {
+        _data = data;
+        _delayedDataProvider = null;
+        _clearDelayedDataAfterWrite = false;
+    }
+
+    internal void SetDelayedData(Func<byte[]> dataProvider, bool clearAfterWrite = true)
+    {
+        _delayedDataProvider = dataProvider ?? throw new ArgumentNullException(nameof(dataProvider));
+        _clearDelayedDataAfterWrite = clearAfterWrite;
+        _data = [];
+    }
 
     internal void SetDecodeParms(PdfObject? decodeParms)
     {
@@ -772,17 +786,29 @@ internal sealed class PdfStreamObject : PdfObject
 
     protected override void WriteValueTo(PdfWriter writer)
     {
-        var filter = ResolveFilter();
-        var data = ApplyEncodingFilters(filter, _data);
-        data = writer.ShouldEncryptCurrentObject ? writer.EncryptCurrentObject(data) : data;
+        var delayed = _delayedDataProvider is not null;
+        if (delayed)
+            _data = _delayedDataProvider!() ?? throw new InvalidOperationException("Delayed stream data provider returned null.");
 
-        WriteFilterDictionaryEntries(filter);
+        try
+        {
+            var filter = ResolveFilter();
+            var data = ApplyEncodingFilters(filter, _data);
+            data = writer.ShouldEncryptCurrentObject ? writer.EncryptCurrentObject(data) : data;
 
-        Dictionary.Set("Length", new PdfInteger(data.Length));
-        Dictionary.WriteTo(writer);
-        writer.WriteAscii("\nstream\n");
-        writer.WriteBytes(data);
-        writer.WriteAscii("\nendstream");
+            WriteFilterDictionaryEntries(filter);
+
+            Dictionary.Set("Length", new PdfInteger(data.Length));
+            Dictionary.WriteTo(writer);
+            writer.WriteAscii("\nstream\n");
+            writer.WriteBytes(data);
+            writer.WriteAscii("\nendstream");
+        }
+        finally
+        {
+            if (delayed && _clearDelayedDataAfterWrite)
+                _data = [];
+        }
     }
 
     private PdfStreamFilter ResolveFilter()

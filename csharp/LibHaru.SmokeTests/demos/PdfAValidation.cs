@@ -22,6 +22,39 @@ public static class PdfAValidation
             RequireThrows(HaruStatus.InvalidDocumentState, () => HPDF_SaveToStream(encrypted));
         }
 
+        using (var openActionJavaScript = HPDF_New())
+        {
+            HPDF_AddPage(openActionJavaScript);
+            AddPdfARequirements(openActionJavaScript);
+            HPDF_SetOpenAction(openActionJavaScript, HPDF_CreateJavaScript(openActionJavaScript, "app.alert('nope');"));
+            RequireThrows(HaruStatus.InvalidDocumentState, () => HPDF_SaveToStream(openActionJavaScript));
+        }
+
+        using (var namedJavaScript = HPDF_New())
+        {
+            HPDF_AddPage(namedJavaScript);
+            AddPdfARequirements(namedJavaScript);
+            HPDF_AddNamedJavaScript(namedJavaScript, "boot", HPDF_CreateJavaScript(namedJavaScript, "app.alert('nope');"));
+            RequireThrows(HaruStatus.InvalidDocumentState, () => HPDF_SaveToStream(namedJavaScript));
+        }
+
+        using (var annotationJavaScript = HPDF_New())
+        {
+            var page = HPDF_AddPage(annotationJavaScript);
+            AddPdfARequirements(annotationJavaScript);
+            var annotation = HPDF_Page_CreateURILinkAnnot(page, new PdfRect(10, 10, 60, 40), "https://example.com");
+            HPDF_LinkAnnot_SetJavaScript(annotation, HPDF_CreateJavaScript(annotationJavaScript, "app.alert('nope');"));
+            RequireThrows(HaruStatus.InvalidDocumentState, () => HPDF_SaveToStream(annotationJavaScript));
+        }
+
+        using (var threeDAnnotation = HPDF_New())
+        {
+            var page = HPDF_AddPage(threeDAnnotation);
+            AddPdfARequirements(threeDAnnotation, PdfPdfAType.PdfA3B);
+            HPDF_Page_Create3DAnnot(page, new PdfRect(10, 10, 80, 80), HPDF_LoadU3DFromMem(threeDAnnotation, [1, 2, 3, 4]));
+            RequireThrows(HaruStatus.InvalidDocumentState, () => HPDF_SaveToStream(threeDAnnotation));
+        }
+
         using (var wrongMetadata = HPDF_New())
         {
             HPDF_AddPage(wrongMetadata);
@@ -107,6 +140,12 @@ public static class PdfAValidation
         }
 
         Console.WriteLine("PDF/A standalone rule smoke passed");
+    }
+
+    private static void AddPdfARequirements(PdfDocument pdf, PdfPdfAType type = PdfPdfAType.PdfA1B)
+    {
+        HPDF_AppendOutputIntents(pdf, "sRGB", [1, 2, 3, 4], "sRGB");
+        HPDF_PDFA_SetPDFAConformance(pdf, type);
     }
 
     private static (PdfPdfAType Type, string Header, string Part, string Conformance, bool RequiresRevision)[] PdfAIdentificationCases() =>

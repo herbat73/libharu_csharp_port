@@ -1,4 +1,11 @@
 # pdf	min_width	min_height	min_non_white_pixels	min_color_count
 libharu-managed-smoke.pdf	500	500	1000	2
+libharu-managed-compression.pdf	500	500	100	2
+libharu-managed-fonts.pdf	500	500	500	2
 libharu-managed-document-features.pdf	500	500	500	2
+libharu-managed-images.pdf	500	500	500	2
+libharu-managed-name-trees.pdf	500	500	100	2
+compat-font-demo.pdf	500	500	100	2
+compat-image-demo.pdf	500	500	100	2
+compat-image-fixtures-demo.pdf	500	500	100	2
 compat-pdf-a-conformance-demo.pdf	500	500	500	2

@@ -12,6 +12,7 @@ public static class ObjectSemantics
         CollectionLookupsValidateObjectClasses();
         CollectionLookupsRequireExactSubclasses();
         ModuleValidatorsRejectSubclassMismatches();
+        DocumentResourceValidatorsRejectInvalidObjects();
         EncryptedStringsWriteAsEncryptedHex();
 
         Console.WriteLine("Object semantics smoke passed");
@@ -211,6 +212,81 @@ public static class ObjectSemantics
 
             var ex = RequireThrows(() => pdf.SaveToStream());
             Require(ex.Status == HaruStatus.InvalidPage, "Page subclass validation raised the wrong status.");
+        }
+    }
+
+    private static void DocumentResourceValidatorsRejectInvalidObjects()
+    {
+        using (var pdf = PdfDocument.New())
+        {
+            var javaScript = pdf.CreateJavaScript("app.alert('x');");
+            javaScript.ScriptObject.Value = PdfNull.New();
+
+            var ex = RequireThrows(() => pdf.SetOpenAction(javaScript));
+            Require(ex.Status == HaruStatus.InvalidObject, "JavaScript stream validation raised the wrong status.");
+        }
+
+        var tempFile = Path.Combine(AppContext.BaseDirectory, $"embedded-{Guid.NewGuid():N}.txt");
+        File.WriteAllText(tempFile, "embedded payload");
+        try
+        {
+            using var pdf = PdfDocument.New();
+            var embeddedFile = pdf.AttachFile(tempFile);
+            embeddedFile.FileSpecObject.Value = PdfNull.New();
+
+            var ex = RequireThrows(() => embeddedFile.SetDescription("broken"));
+            Require(ex.Status == HaruStatus.InvalidObject, "Embedded file validation raised the wrong status.");
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var intent = pdf.AppendOutputIntent("sRGB", [1, 2, 3, 4], "sRGB");
+            intent.IntentObject.Value = PdfNull.New();
+
+            var ex = RequireThrows(() => pdf.SaveToStream());
+            Require(ex.Status == HaruStatus.InvalidObject, "Output intent validation raised the wrong status.");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var view = pdf.Create3DView("default");
+            ((PdfDictionary)view.ViewObject.Value).SetName("Type", "Not3DView");
+
+            var ex = RequireThrows(() => view.SetLighting("Day"));
+            Require(ex.Status == HaruStatus.InvalidU3DData, "3D view validation raised the wrong status.");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var node = pdf.Create3DNode("part");
+            ((PdfDictionary)node.NodeObject.Value).SetName("Type", "Not3DNode");
+
+            var ex = RequireThrows(() => node.SetOpacity(0.5));
+            Require(ex.Status == HaruStatus.InvalidU3DData, "3D node validation raised the wrong status.");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var measure = pdf.Create3DC3DMeasure(new PdfPoint3D(0, 0, 0), new PdfPoint3D(1, 1, 1));
+            ((PdfDictionary)measure.MeasureObject.Value).SetName("Type", "Not3DMeasure");
+
+            var ex = RequireThrows(() => measure.SetText("broken"));
+            Require(ex.Status == HaruStatus.InvalidU3DData, "3D measure validation raised the wrong status.");
+        }
+
+        using (var pdf = PdfDocument.New())
+        {
+            var page = pdf.AddPage();
+            var annotation = page.CreateProjectionAnnotation(new PdfRect(0, 0, 10, 10), "projection");
+            var exData = page.Create3DAnnotExData();
+            ((PdfDictionary)exData.ExDataObject.Value).SetName("Subtype", "Other");
+
+            var ex = RequireThrows(() => annotation.SetExData(exData));
+            Require(ex.Status == HaruStatus.InvalidObject, "Projection ExData validation raised the wrong status.");
         }
     }
 
