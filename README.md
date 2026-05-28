@@ -1,5 +1,7 @@
 # Haru Free PDF Library C# full managed code port 
 
+[![.NET Build and Test](https://github.com/herbat73/libharu_csharp_port/actions/workflows/dotnet_build_and_test.yml/badge.svg)](https://github.com/herbat73/libharu_csharp_port/actions/workflows/dotnet_build_and_test.yml)
+
   **URL http://libharu.org/**
 
   **Copyright 2000-2006 (c) Takeshi Kanno**
