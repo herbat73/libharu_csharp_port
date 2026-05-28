@@ -28,13 +28,13 @@ Exact upstream/reference PDF comparisons are manifest-driven through `csharp/Lib
 
 Status: the checked-in C headers, source modules, bundled fixtures, canonical PDF demos, reference-output hashes, and Poppler visual profiles have managed coverage. The current tree has no remaining migration task list.
 
-Verification on 2026-05-28:
+Latest recheck on 2026-05-28:
 
 - `dotnet build ..\LibHaruSharp.sln` succeeded with 0 warnings and 0 errors.
 - `dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj` generated the managed smoke PDFs, 4 real-font fixture PDFs, 1 external image fixture PDF covering 4 image assets, 28 compatibility demo PDFs, and passed 41 generated-PDF structural reader checks.
 - The smoke harness checks 20 checked-in upstream C-output PDF SHA-256 fixture rows. No byte-identical managed/upstream exact-PDF rows are configured yet because the current managed outputs differ in metadata/object serialization from the canonical demo PDFs.
-- Optional Poppler visual render checks passed with portable Poppler `pdftoppm` 26.02.0 via `LIBHARU_PDFTOPPM`; 10 first-page visual reference profiles were refreshed.
-- The local `include/hpdf.h` exported `HPDF_*` function names were audited against the managed `HPdf` facade; all exported function names are represented.
+- Optional Poppler visual render checks were skipped in this shell because `pdftoppm` was not available on `PATH` and no local executable was found; the checked-in `visual-reference.tsv` remains the current Poppler profile baseline.
+- The local `include/hpdf.h` public export audit found 290 `HPDF_EXPORT` functions; all are represented by the managed `HPdf` facade.
 
 - `hpdf_objects.c`, `hpdf_array.c`, `hpdf_dict.c`, `hpdf_name.c`, `hpdf_number.c`, `hpdf_real.c`, `hpdf_string.c`: migrated in `Internal/PdfObjects.cs`, including direct/proxy ownership semantics, exact typed array/dictionary base/subclass lookup validation for all migrated object wrappers, managed stream-vs-dictionary type guards, direct raw objects, and encrypted string/binary writing.
 - `hpdf_streams.c`, `hpdf_xref.c`: migrated through `Internal/PdfWriter.cs` and the writer in `Public/PdfDocument.cs`, with generated-PDF reader checks covering xref/trailer/reference behavior.
