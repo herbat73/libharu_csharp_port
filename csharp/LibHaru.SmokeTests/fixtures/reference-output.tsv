@@ -1,5 +1,27 @@
 # generated_pdf	reference_pdf	reference_sha256
 # Add rows when exact upstream C-output PDFs or stable SHA-256 hashes are available.
-# Examples:
+# Rows with generated_pdf = "-" pin checked-in upstream C-output hashes without requiring byte-identical managed output yet.
+# Exact comparison example:
 # compatibility-demos/compat-arc-demo.pdf	fixtures/upstream/arc_demo.pdf	-
+# Generated SHA-256 example:
 # compatibility-demos/compat-font-demo.pdf	-	0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+-	demo/arc_demo.pdf	19c2af63b8ab2cbbf7a5c5a2ddcde824d46de1accb4c5dea420c2fee743b9eb5
+-	demo/encoding_list.pdf	f3f3b974b002fdf3b5f4f535cff5060982fe91f8b08d5619be5e496794c5e7f6
+-	demo/encryption.pdf	5731f15a6c6188ecdbc873e4b79e37bd14edfc4d50fae2952ce828bd76234f9c
+-	demo/ext_gstate_demo.pdf	01e2126bab892af1c7248aadb723ccfc3f8e7bce0fb01265f8d5a19a0067352a
+-	demo/font_demo.pdf	f6057a384c24b3f2f3d4d21cf4662c2b1dfa8d0862e3171df118c5f47850b018
+-	demo/grid_sheet.pdf	7e6af5d9a5ac50ad7ad3214e23e851b0d268dee02fa8677701d927cf3730be02
+-	demo/image_demo.pdf	f687bfa20ee8fecd24361e3161a81d911a7b7f8d9c547e3152b2a274ab79daac
+-	demo/jpeg_demo.pdf	16bbdcad07187c70fc87c2ffca4e20166fce10c204e3b406f635657f840af658
+-	demo/jpfont_demo.pdf	c6a47d64c396a8807cde58ba3fd61f6ff4b2cb185f769f01b6e5a7a42e7b9d4c
+-	demo/line_demo.pdf	5d17b9bd0a2847ff8fc4d440a11dced958fe2b52ccc57bf4d494e73e52318206
+-	demo/link_annotation.pdf	54f8d4bd290d7d12637553ec984a44f728b4b32d4a664d61ffc54b11ba167be8
+-	demo/outline_demo.pdf	17c38b7ba9823145d293227d60b132fe97dce6dcd18916ce2346e3851b223c20
+-	demo/permission.pdf	64014d3e05883fb4dda87237e277166224333a67446ca2e0ee08d8b2fd51b391
+-	demo/png_demo.pdf	054b03d22cee41498f2a2dc5089f9f602ef83c8cdc0eebd09ae647a34f54d1a7
+-	demo/raw_image_demo.pdf	c1ba039dadfebd186a3bf470d3082a2245cec83d8c79714efab6bad667c70293
+-	demo/slide_show_demo.pdf	5a61d379fb90fcffbe70371741c79c8211abf6829393ac1ea8744dc53272fc4f
+-	demo/text_demo.pdf	7b287449a24d609f4ec9789a7228612c50a58a69f3e0effc5d5235ca7618892c
+-	demo/text_demo2.pdf	55bf2790db79e2850b59879c0d75111308ff9c264fd403ee0b5ca0b89eb644fb
+-	demo/ttfont_demo.pdf	94077145542e3722b844c886bbccb6e2ae880d7abb37d1c455e44f4e511ceb32
+-	demo/ttfont_demo_jp.pdf	64c2496b86a0382947e5fe2b9b8bfe4a1f2003f1521c264c0f083a4a037efd0f

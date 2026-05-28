@@ -21,7 +21,7 @@ dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj
 The smoke test writes `artifacts/libharu-managed-smoke.pdf`.
 Compatibility demo ports write generated PDFs and `.structure.txt` regression profiles under `artifacts/compatibility-demos`.
 When Poppler `pdftoppm` is available, selected first-page renders are checked against `csharp/LibHaru.SmokeTests/fixtures/visual-reference.tsv` and write pixel profiles under `artifacts/rendered`. Set `LIBHARU_PDFTOPPM` to a `pdftoppm` executable or containing directory when it is not on `PATH`; set `LIBHARU_REFRESH_VISUAL_REFERENCES=1` to refresh the TSV from current renders.
-Exact upstream/reference PDF comparisons are manifest-driven through `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv`; rows become byte-for-byte or SHA-256 checks as soon as stable upstream fixtures are added.
+Exact upstream/reference PDF comparisons are manifest-driven through `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv`; rows can assert byte-for-byte generated matches, generated SHA-256 hashes, or checked-in upstream C-output SHA-256 hashes.
 
 ## Current Managed Slice
 
@@ -31,7 +31,7 @@ Verification on 2026-05-28:
 
 - `dotnet build ..\LibHaruSharp.sln` succeeded with 0 warnings and 0 errors.
 - `dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj` generated the managed smoke PDFs, 3 real-font fixture PDFs, 28 compatibility demo PDFs, and passed 39 generated-PDF structural reader checks.
-- The smoke harness found no exact upstream reference-output fixtures configured yet.
+- The smoke harness checks 20 checked-in upstream C-output PDF SHA-256 fixture rows. No byte-identical managed/upstream exact-PDF rows are configured yet because the current managed outputs differ in metadata/object serialization from the canonical demo PDFs.
 - Optional Poppler visual render checks passed with portable Poppler `pdftoppm` 26.02.0 via `LIBHARU_PDFTOPPM`; 10 first-page visual reference profiles were refreshed.
 - The local `include/hpdf.h` exported `HPDF_*` function names were audited against the managed `HPdf` facade; all exported function names are represented.
 
@@ -43,7 +43,7 @@ Verification on 2026-05-28:
 - `hpdf_fontdef_type1.c`, `hpdf_font_type1.c`: migrated for Type1 AFM parsing, PFB/PFA font program loading, font descriptors, widths arrays, and `/FontFile` embedding.
 - `hpdf_fontdef_tt.c`, `hpdf_font_tt.c`: migrated for TrueType `head`, `hhea`, `maxp`, `hmtx`, `cmap` formats 0/4/6/10/12/13, `name`, `OS/2`, optional `post`, TTC face selection, embedding-permission checks, lower-level TT font-def handles, simple-font widths, descriptors, and `/FontFile2` embedding. Embedded TrueType font programs emit deterministic dense glyph subsets from actual simple/composite text use, including composite-glyph component closure/remapping, rebuilt subset `cmap`/`hmtx`/`loca` tables, explicit CIDToGIDMap streams, Type0 `/DW2` vertical metrics from the font bbox, and save-time ToUnicode CMaps for Identity and predefined CMap Type0 paths. Simple OpenType/CFF `OTTO` fonts share the SFNT metric parser and embed as `/FontFile3` `/Subtype /OpenType`; checked-in real-font fixture coverage now includes Aguafina Script, Akronim, and Alfa Slab One TTFs with manifest validation. CID-keyed CFF Type0 coverage remains fixture-gated.
 - `hpdf_encoder.c`, `hpdf_encoder_utf.c`, `hpdf_encoder_jp.c`, `hpdf_encoder_kr.c`, `hpdf_encoder_cns.c`, `hpdf_encoder_cnt.c`: migrated for Standard, WinAnsi/CP1252, FontSpecific, ISO8859 aliases, CP125x aliases, MacRoman, KOI8-R, UTF/Identity, and predefined Japanese/Korean/Simplified Chinese/Traditional Chinese CMap entry points. Generated upstream single-byte Unicode maps, CJK Unicode maps, CMap CID ranges, exact lead/trail byte classifiers, JP EUC-H/EUC-V entries, public encoder handles/introspection, and save-time ToUnicode CMaps are present.
-- `hpdf_encrypt.c`, `hpdf_encryptdict.c`: migrated for Standard Security revision 2/3 password handling, permissions, encryption dictionary preparation, file IDs, encryption dictionary validation, user/owner password authentication, and per-object RC4 encryption/decryption for strings, binary values, and streams.
+- `hpdf_encrypt.c`, `hpdf_encryptdict.c`: migrated for Standard Security revision 2/3 password handling, permissions, encryption dictionary preparation, file IDs, encryption dictionary validation, user/owner password authentication, and per-object RC4 encryption/decryption for strings, binary values, and streams. Upstream libharu `v2.4.6`/HEAD was audited on 2026-05-28 for later security revisions, AES, and crypt-filter support; no newer security-handler surface was present.
 - `hpdf_error.c`, `hpdf_error.h`: migrated for the full status-code table, document error state, detail codes, reset/check behavior, callback dispatch, and document-owned error paths across the migrated modules and resource validators.
 - `hpdf_streams.c`, stream filter portions of `hpdf_dict.c`: migrated for libharu-style `/Filter` arrays and array-shaped `/DecodeParms`, with Flate encoding for page content, raw image streams, metadata streams, embedded files, JavaScript, ICC streams, generated form XObjects, DCT filters for JPEG streams, and CCITT Group 4 image streams.
 - `hpdf_image.c`, `hpdf_image_png.c`, `hpdf_image_ccitt.c`: migrated for JPEG memory/file streams, PNG memory/file loading, raw memory/file images, 1-bit raw images with CCITT Group 4 encoding, image masks, soft masks, color-key masks, DeviceGray/RGB/CMYK raw color spaces, Indexed PNG color spaces, PNG CRC/order validation, PNG gAMA/cHRM/sRGB/iCCP color metadata mapping, non-color PNG ancillary chunk validation, delayed file-backed PNG data loading for `LoadPngImageFromFile2`, image validators, page image XObject resources, form XObject construction helpers from images/white rectangles, and optional external image compatibility fixtures for checked-in JPEG/PNG/raw/1-bit CCITT samples.
@@ -59,14 +59,14 @@ Verification on 2026-05-28:
 
 The local source migration is complete for the checked-in headers and C modules. The items below remain open only for future fixture drops, external verification tools, or newer upstream APIs.
 
-- [ ] Add exact upstream C-output PDF or SHA-256 fixture rows to `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv` when stable upstream outputs are checked in.
+- [x] Add exact upstream C-output PDF or SHA-256 fixture rows to `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv` when stable upstream outputs are checked in. The checked-in canonical demo PDFs are pinned by SHA-256; exact byte-for-byte managed comparison rows remain available for future stable matches.
 - [x] Enable and refresh optional Poppler visual regression profiles when `pdftoppm` is available on the verification machine.
 - [x] Add simple OpenType/CFF font coverage, deeper vertical TrueType metrics, and an optional checked-in real-font fixture harness.
 - [x] Check in additional real-font fixtures under `csharp/LibHaru.SmokeTests/fixtures/fonts` to broaden compatibility coverage beyond the bundled demo TTF.
 - [x] Broaden image compatibility coverage with optional external JPEG/PNG/raw/CCITT fixtures.
 - [x] Add document-owned error paths and typed validators for any newly migrated C modules or object subclasses.
 - [x] Add further annotation and 3D variants only if upstream introduces APIs or fixtures outside the current local headers. Audited upstream libharu `v2.4.6`/HEAD; no additional variants were found.
-- [ ] Revisit security-handler support only if a newer upstream source exposes later security revisions; the checked-in C source only exposes revision 2/3 Standard Security.
+- [x] Revisit security-handler support only if a newer upstream source exposes later security revisions; the checked-in C source only exposes revision 2/3 Standard Security. Audited upstream libharu `v2.4.6`/HEAD; no R4/R5/R6, AES, or crypt-filter support was found.
 
 ## Source Module Map
 
@@ -83,7 +83,7 @@ The local source migration is complete for the checked-in headers and C modules.
 | Encoders and CMaps | `PdfEncoding`, generated single-byte maps, generated CJK CMap data, generated ToUnicode streams | Migrated for public encoder handles/introspection, single-byte maps, UTF/Identity, CJK byte classifiers, JP EUC-H/EUC-V, predefined CJK CMaps, and save-time ToUnicode maps. |
 | Images and color spaces | `PdfDocument`, `PdfImage`, `PngImageLoader`, `CcittFaxEncoder`, `PdfPage` | Migrated for JPEG, PNG, raw images, CCITT Group 4, masks, Indexed PNG color spaces, PNG metadata/validation, delayed file-backed PNG data, image/form XObject resources, and optional checked-in external fixture coverage. |
 | Stream filters and compression | `PdfStreamObject`, `PdfStreamFilter` | Migrated for Flate, DCT, CCITT, ASCIIHex, ASCII85, and DecodeParms dictionary output. |
-| Encryption | `PdfEncryption`, `PdfDocument`, `PdfWriter` | Migrated for revision 2/3 Standard Security validation, authentication, dictionary generation, and object encryption/decryption. |
+| Encryption | `PdfEncryption`, `PdfDocument`, `PdfWriter` | Migrated for revision 2/3 Standard Security validation, authentication, dictionary generation, and object encryption/decryption; upstream still exposes no later security-handler revisions. |
 | PDF/A, metadata, output intents | `PdfDocument`, `PdfIccProfile`, `PdfOutputIntent` | Migrated for metadata/output-intent generation, ICC loading aliases, PDF/A conformance metadata, and save-time guardrails. |
 | Outlines, destinations, annotations | `PdfDestination`, `PdfOutline`, `PdfAnnotation`, `PdfPage`, `PdfDocument` | Migrated for destinations, outlines, page labels, link/URI/text/free-text/shape/markup/popup/stamp/projection/widget/basic 3D annotations, appearance streams, and annotation validation covered by smoke tests. |
 | Names, attachments, JavaScript, PDF/A, output intents | `PdfEmbeddedFile`, `PdfJavaScript`, `PdfOutputIntent`, `PdfDocument` | Migrated for embedded-file streams/filespecs, name trees, catalog associated files, JavaScript actions, PDF/A restrictions, output-intent resources, and typed resource validators. |
