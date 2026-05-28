@@ -6,7 +6,7 @@
 
   **Copyright 2007-2009 (c) Antony Dovgal et al.**
 
-  **Copyright 2026 (c) Port to C# Adam Adamczyk + Codex with ChatGPT 5.5 model**
+  **Copyright 2026 (c) Port to C# Adam Adamczyk**
 
 See [PORTING](PORTING.md) for porting info and instructions on how to install libHaru C#.
 
@@ -82,4 +82,4 @@ to the following restrictions:
 3. Adobe Systems Inc.
    We thank Adobe Systems Inc. for publishing PDF specification.
 
-4. ChatGpt.com for providing Codex along with the ChatGPT 5.5 model for migration from c to c# process   
+4. ChatGpt.com for providing Codex along with the ChatGPT 5.5 model for migration from c to c# process.   
