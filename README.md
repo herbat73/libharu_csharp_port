@@ -38,6 +38,7 @@ The biggest difference is that all the code is written in C# together with dotne
 
 Old pure c LibHaru source demos are located in the demos/original folder and are stored to generate smoke test artifacts (artifacts folder) and PDF comparisons.
 
+New generated demos are located in the demos folder and fresh generated on artifacts folder when SmokeTests project is executed.
 
 # License
 
