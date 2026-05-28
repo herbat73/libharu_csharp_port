@@ -1,0 +1,33 @@
+demo: jpfont_demo.c managed port
+file: compat-jpfont-demo.pdf
+bytes: 69270
+header: %PDF-1.4
+objects: 118
+pages: 16
+checks:
+  /PageMode /UseOutlines: 1 (expected >= 1)
+  /Outlines: 2 (expected >= 1)
+  /Type /Page\n: 16 (expected >= 16)
+  /Subtype /Type0: 16 (expected >= 16)
+  /Subtype /CIDFontType0: 16 (expected >= 16)
+  /Ordering (Japan1): 16 (expected >= 16)
+  /Encoding /90ms-RKSJ-H: 8 (expected >= 8)
+  /Encoding /90msp-RKSJ-H: 8 (expected >= 8)
+  /DescendantFonts [: 16 (expected >= 16)
+  JP font demo: 1 (expected >= 1)
+  /BaseFont /MS-Mincho\n: 2 (expected >= 1)
+  /BaseFont /MS-Mincho,Bold\n: 2 (expected >= 1)
+  /BaseFont /MS-Mincho,Italic\n: 2 (expected >= 1)
+  /BaseFont /MS-Mincho,BoldItalic\n: 2 (expected >= 1)
+  /BaseFont /MS-PMincho\n: 2 (expected >= 1)
+  /BaseFont /MS-PMincho,Bold\n: 2 (expected >= 1)
+  /BaseFont /MS-PMincho,Italic\n: 2 (expected >= 1)
+  /BaseFont /MS-PMincho,BoldItalic\n: 2 (expected >= 1)
+  /BaseFont /MS-Gothic\n: 2 (expected >= 1)
+  /BaseFont /MS-Gothic,Bold\n: 2 (expected >= 1)
+  /BaseFont /MS-Gothic,Italic\n: 2 (expected >= 1)
+  /BaseFont /MS-Gothic,BoldItalic\n: 2 (expected >= 1)
+  /BaseFont /MS-PGothic\n: 2 (expected >= 1)
+  /BaseFont /MS-PGothic,Bold\n: 2 (expected >= 1)
+  /BaseFont /MS-PGothic,Italic\n: 2 (expected >= 1)
+  /BaseFont /MS-PGothic,BoldItalic\n: 2 (expected >= 1)

@@ -1,0 +1,12 @@
+demo: ttfont_demo.c managed port
+file: compat-ttfont-demo.pdf
+bytes: 35402
+header: %PDF-1.4
+objects: 9
+pages: 1
+checks:
+  /Subtype /TrueType: 1 (expected >= 1)
+  /FontFile2: 1 (expected >= 1)
+  /BaseFont /PenguinAttack: 1 (expected >= 1)
+  /Widths [: 1 (expected >= 1)
+  Embedded Subset: 1 (expected >= 1)

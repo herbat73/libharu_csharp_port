@@ -1,0 +1,14 @@
+demo: attach.c managed port
+file: compat-attach-demo.pdf
+bytes: 2329
+header: %PDF-1.4
+objects: 8
+pages: 1
+checks:
+  /PageMode /UseAttachments: 1 (expected >= 1)
+  /Names: 2 (expected >= 1)
+  /EmbeddedFiles: 1 (expected >= 1)
+  /Type /Filespec: 1 (expected >= 1)
+  /Type /EmbeddedFile: 1 (expected >= 1)
+  /Desc (libharu attachment demo fixture): 1 (expected >= 1)
+  /Subtype /image#2Fpng: 1 (expected >= 1)

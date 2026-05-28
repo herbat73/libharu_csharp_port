@@ -1,0 +1,13 @@
+demo: arc_demo.c managed port
+file: compat-arc-demo.pdf
+bytes: 1461
+header: %PDF-1.4
+objects: 5
+pages: 1
+checks:
+  /MediaBox [0 0 200 220]: 1 (expected >= 1)
+   rg\n: 4 (expected >= 4)
+   G\n: 1 (expected >= 1)
+   g\n: 1 (expected >= 1)
+   c\n: 9 (expected >= 9)
+  \nf\n: 5 (expected >= 5)

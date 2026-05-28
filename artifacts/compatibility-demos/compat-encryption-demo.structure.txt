@@ -1,0 +1,15 @@
+demo: encryption.c managed port
+file: compat-encryption-demo.pdf
+bytes: 1184
+header: %PDF-1.4
+objects: 7
+pages: 1
+checks:
+  /Encrypt: 1 (expected >= 1)
+  /Filter /Standard: 1 (expected >= 1)
+  /V 1: 1 (expected >= 1)
+  /R 2: 1 (expected >= 1)
+  /O <: 1 (expected >= 1)
+  /U <: 1 (expected >= 1)
+  /P : 1 (expected >= 1)
+  /ID [<: 1 (expected >= 1)

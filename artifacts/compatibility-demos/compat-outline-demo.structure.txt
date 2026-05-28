@@ -1,0 +1,14 @@
+demo: outline_demo.c managed port
+file: compat-outline-demo.pdf
+bytes: 2154
+header: %PDF-1.4
+objects: 18
+pages: 3
+checks:
+  /PageMode /UseOutlines: 1 (expected >= 1)
+  /Outlines: 2 (expected >= 1)
+  /Type /Page\n: 3 (expected >= 3)
+  /Dest : 3 (expected >= 3)
+  OutlineRoot: 1 (expected >= 1)
+  page1: 1 (expected >= 1)
+  page2: 1 (expected >= 1)

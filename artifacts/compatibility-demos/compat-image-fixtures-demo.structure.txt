@@ -1,0 +1,13 @@
+demo: image/png/jpeg/raw compatibility fixtures
+file: compat-image-fixtures-demo.pdf
+bytes: 37526
+header: %PDF-1.4
+objects: 10
+pages: 1
+checks:
+  /Subtype /Image: 4 (expected >= 4)
+  /XObject: 5 (expected >= 1)
+  /DCTDecode: 1 (expected >= 1)
+  /ColorSpace /DeviceRGB: 3 (expected >= 3)
+  /BitsPerComponent 8: 4 (expected >= 4)
+   Do\n: 5 (expected >= 5)

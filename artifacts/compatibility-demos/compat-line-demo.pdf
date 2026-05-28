@@ -1,0 +1,246 @@
+%PDF-1.4
+%·¾­ª
+1 0 obj
+<<
+/Type /Pages
+/Kids [6 0 R]
+/Count 1
+>>
+endobj
+2 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/PageLayout /SinglePage
+/PageMode /UseNone
+>>
+endobj
+3 0 obj
+<<
+/Producer (Haru Free PDF Library 2.4.6-managed)
+/CreationDate (D:20260528165722+01'00')
+>>
+endobj
+4 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+>>
+endobj
+5 0 obj
+<<
+/Length 1580
+>>
+stream
+1 w
+50 50 495.276 731.89 re
+S
+BT
+/F1 24 Tf
+224.942 791.89 Td
+(Line Example) Tj
+ET
+0 w
+BT
+/F1 10 Tf
+60 760 Td
+(line width = 0) Tj
+ET
+60 755 m
+280 755 l
+S
+1 w
+BT
+/F1 10 Tf
+60 730 Td
+(line width = 1.0) Tj
+ET
+60 725 m
+280 725 l
+S
+2 w
+BT
+/F1 10 Tf
+60 700 Td
+(line width = 2.0) Tj
+ET
+60 695 m
+280 695 l
+S
+1 w
+[3] 1 d
+BT
+/F1 10 Tf
+60 670 Td
+(dash_ptn=[3], phase=1) Tj
+ET
+60 665 m
+280 665 l
+S
+[3 7] 2 d
+BT
+/F1 10 Tf
+60 640 Td
+(dash_ptn=[7, 3], phase=2) Tj
+ET
+60 635 m
+280 635 l
+S
+[8 7 2 7] 0 d
+BT
+/F1 10 Tf
+60 610 Td
+(dash_ptn=[8, 7, 2, 7], phase=0) Tj
+ET
+60 605 m
+280 605 l
+S
+[] 0 d
+30 w
+0 0.5 0 RG
+0 J
+BT
+/F1 10 Tf
+60 570 Td
+(PDF_BUTT_END) Tj
+ET
+90 545 m
+220 545 l
+S
+1 J
+BT
+/F1 10 Tf
+60 505 Td
+(PDF_ROUND_END) Tj
+ET
+90 480 m
+220 480 l
+S
+2 J
+BT
+/F1 10 Tf
+60 440 Td
+(PDF_PROJECTING_SQUARE_END) Tj
+ET
+90 415 m
+220 415 l
+S
+0 0 0.5 RG
+10 M
+0 j
+120 300 m
+160 340 l
+200 300 l
+S
+BT
+/F1 10 Tf
+60 360 Td
+(PDF_MITER_JOIN) Tj
+ET
+1 j
+120 195 m
+160 235 l
+200 195 l
+S
+BT
+/F1 10 Tf
+60 255 Td
+(PDF_ROUND_JOIN) Tj
+ET
+2 j
+120 90 m
+160 130 l
+200 90 l
+S
+BT
+/F1 10 Tf
+60 150 Td
+(PDF_BEVEL_JOIN) Tj
+ET
+2 w
+0 0 0 RG
+0.75 0 0 rg
+BT
+/F1 10 Tf
+300 760 Td
+(Stroke) Tj
+ET
+300 730 220 25 re
+S
+BT
+/F1 10 Tf
+300 710 Td
+(Fill) Tj
+ET
+300 680 220 25 re
+f
+BT
+/F1 10 Tf
+300 660 Td
+(Fill then Stroke) Tj
+ET
+300 630 220 25 re
+B
+q
+BT
+/F1 10 Tf
+300 610 Td
+(Clip Rectangle) Tj
+ET
+300 580 220 25 re
+W
+S
+BT
+/F1 13 Tf
+290 600 Td
+12 TL
+(Clip Clip Clip Clip Clip Clip Clip) Tj
+(Clip Clip Clip Clip Clip Clip Clip) '
+ET
+Q
+0 0 0 RG
+1.5 w
+330 440 m
+430 530 480 470 v
+S
+330 290 m
+430 380 480 320 y
+S
+330 140 m
+430 280 490 210 480 90 c
+S
+
+endstream
+endobj
+6 0 obj
+<<
+/Type /Page
+/Parent 1 0 R
+/MediaBox [0 0 595.276 841.89]
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/Contents 5 0 R
+>>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000072 00000 n 
+0000000164 00000 n 
+0000000273 00000 n 
+0000000343 00000 n 
+0000001975 00000 n 
+trailer
+<<
+/Size 7
+/Root 2 0 R
+/Info 3 0 R
+>>
+startxref
+2108
+%%EOF

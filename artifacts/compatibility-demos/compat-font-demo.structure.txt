@@ -1,0 +1,29 @@
+demo: font_demo.c managed port
+file: compat-font-demo.pdf
+bytes: 3637
+header: %PDF-1.4
+objects: 19
+pages: 1
+checks:
+  /Type /Page\n: 1 (expected >= 1)
+  /Font <<: 1 (expected >= 1)
+  /Subtype /Type1: 14 (expected >= 14)
+   Tf\n: 32 (expected >= 30)
+   Tj\n: 30 (expected >= 30)
+  Font Demo: 1 (expected >= 1)
+  <Standard Type1 fonts samples>: 1 (expected >= 1)
+  abcdefgABCDEFG12345!#$%&+-@?: 14 (expected >= 14)
+  /BaseFont /Courier\n: 1 (expected >= 1)
+  /BaseFont /Courier-Bold\n: 1 (expected >= 1)
+  /BaseFont /Courier-Oblique\n: 1 (expected >= 1)
+  /BaseFont /Courier-BoldOblique\n: 1 (expected >= 1)
+  /BaseFont /Helvetica\n: 1 (expected >= 1)
+  /BaseFont /Helvetica-Bold\n: 1 (expected >= 1)
+  /BaseFont /Helvetica-Oblique\n: 1 (expected >= 1)
+  /BaseFont /Helvetica-BoldOblique\n: 1 (expected >= 1)
+  /BaseFont /Times-Roman\n: 1 (expected >= 1)
+  /BaseFont /Times-Bold\n: 1 (expected >= 1)
+  /BaseFont /Times-Italic\n: 1 (expected >= 1)
+  /BaseFont /Times-BoldItalic\n: 1 (expected >= 1)
+  /BaseFont /Symbol\n: 1 (expected >= 1)
+  /BaseFont /ZapfDingbats\n: 1 (expected >= 1)

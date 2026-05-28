@@ -1,0 +1,15 @@
+demo: outline_demo_jp.c managed port
+file: compat-outline-demo-jp.pdf
+bytes: 3980
+header: %PDF-1.4
+objects: 21
+pages: 3
+checks:
+  /PageMode /UseOutlines: 1 (expected >= 1)
+  /Outlines: 2 (expected >= 1)
+  /Type /Page\n: 3 (expected >= 3)
+  /Dest : 3 (expected >= 3)
+  /Subtype /Type0: 1 (expected >= 1)
+  /Subtype /CIDFontType0: 1 (expected >= 1)
+  /Encoding /90ms-RKSJ-H: 1 (expected >= 1)
+  /Ordering (Japan1): 1 (expected >= 1)

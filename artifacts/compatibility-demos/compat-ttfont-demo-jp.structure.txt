@@ -1,0 +1,14 @@
+demo: ttfont_demo_jp.c managed port
+file: compat-ttfont-demo-jp.pdf
+bytes: 37339
+header: %PDF-1.4
+objects: 12
+pages: 1
+checks:
+  /Subtype /Type0: 1 (expected >= 1)
+  /Subtype /CIDFontType2: 1 (expected >= 1)
+  /Encoding /90msp-RKSJ-H: 1 (expected >= 1)
+  /CIDToGIDMap: 1 (expected >= 1)
+  /FontFile2: 1 (expected >= 1)
+  /ToUnicode: 1 (expected >= 1)
+  <82A0> <3042>: 1 (expected >= 1)

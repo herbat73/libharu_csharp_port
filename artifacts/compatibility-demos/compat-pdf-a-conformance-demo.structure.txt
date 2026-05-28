@@ -1,0 +1,17 @@
+demo: pdf_a_conformance.c managed port
+file: compat-pdf-a-conformance-demo.pdf
+bytes: 23688
+header: %PDF-1.7
+objects: 13
+pages: 1
+checks:
+  /Metadata: 2 (expected >= 1)
+  /Subtype /XML: 1 (expected >= 1)
+  pdfaid:part>3: 1 (expected >= 1)
+  pdfaid:conformance>B: 1 (expected >= 1)
+  /OutputIntents [: 1 (expected >= 1)
+  /S /GTS_PDFA1: 1 (expected >= 1)
+  /Type /Filespec: 1 (expected >= 1)
+  /AFRelationship /Data: 1 (expected >= 1)
+  factur-x.xml: 7 (expected >= 2)
+  /FontFile2: 1 (expected >= 1)

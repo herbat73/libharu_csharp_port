@@ -1,0 +1,19 @@
+demo: jpeg_demo.c managed port
+file: compat-jpeg-demo.pdf
+bytes: 61905
+header: %PDF-1.4
+objects: 9
+pages: 1
+checks:
+  /MediaBox [0 0 650 500]: 1 (expected >= 1)
+  /OpenAction: 1 (expected >= 1)
+  /Subtype /Image: 2 (expected >= 2)
+  /DCTDecode: 2 (expected >= 2)
+  /ColorSpace /DeviceRGB: 1 (expected >= 1)
+  /ColorSpace /DeviceGray: 1 (expected >= 1)
+  /BitsPerComponent 8: 2 (expected >= 2)
+   cm\n: 2 (expected >= 2)
+   Do\n: 2 (expected >= 2)
+  JpegDemo: 1 (expected >= 1)
+  rgb.jpg: 1 (expected >= 1)
+  gray.jpg: 1 (expected >= 1)

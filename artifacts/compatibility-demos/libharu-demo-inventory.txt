@@ -1,0 +1,63 @@
+libharu demo inventory
+source directory: C:\Users\AdamA\source\sand\libharu_csharp_port\demo
+managed compatibility PDFs: 28
+
+sources:
+- arc_demo.c: managed PDF smoke port
+- attach.c: managed PDF smoke port
+- character_map.c: managed PDF smoke port
+- chfont_demo.c: managed PDF smoke port
+- encoding_list.c: managed PDF smoke port
+- encryption.c: managed PDF smoke port
+- ext_gstate_demo.c: managed PDF smoke port
+- font_demo.c: managed PDF smoke port
+- font_demo.cpp: C++ wrapper sample; font_demo.c covers the managed PDF smoke port
+- grid_sheet.c: managed PDF smoke port
+- image_demo.c: managed PDF smoke port
+- jpeg_demo.c: managed PDF smoke port
+- jpfont_demo.c: managed PDF smoke port
+- line_demo.c: managed PDF smoke port
+- link_annotation.c: managed PDF smoke port
+- make_rawimage.c: utility fixture generator; no PDF smoke port
+- outline_demo.c: managed PDF smoke port
+- outline_demo_jp.c: managed PDF smoke port
+- pdf_a_conformance.c: managed PDF smoke port
+- permission.c: managed PDF smoke port
+- png_demo.c: managed PDF smoke port
+- raw_image_demo.c: managed PDF smoke port
+- slide_show_demo.c: managed PDF smoke port
+- text_annotation.c: managed PDF smoke port
+- text_demo.c: managed PDF smoke port
+- text_demo2.c: managed PDF smoke port
+- ttfont_demo.c: managed PDF smoke port
+- ttfont_demo_jp.c: managed PDF smoke port
+
+generated PDFs:
+- compat-arc-demo.pdf: arc_demo.c managed port
+- compat-attach-demo.pdf: attach.c managed port
+- compat-character-map-demo.pdf: character_map.c managed port
+- compat-chfont-demo.pdf: chfont_demo.c managed port
+- compat-encoding-list-demo.pdf: encoding_list.c managed port
+- compat-encryption-demo.pdf: encryption.c managed port
+- compat-ext-gstate-demo.pdf: ext_gstate_demo.c managed port
+- compat-font-demo.pdf: font_demo.c managed port
+- compat-grid-sheet-demo.pdf: grid_sheet.c managed port
+- compat-line-demo.pdf: line_demo.c managed port
+- compat-link-annotation-demo.pdf: link_annotation.c managed port
+- compat-text-demo.pdf: text_demo.c managed port
+- compat-text-demo2.pdf: text_demo2.c managed port
+- compat-text-annotation-demo.pdf: text_annotation.c managed port
+- compat-image-demo.pdf: image_demo.c managed port
+- compat-image-fixtures-demo.pdf: image/png/jpeg/raw compatibility fixtures
+- compat-jpeg-demo.pdf: jpeg_demo.c managed port
+- compat-jpfont-demo.pdf: jpfont_demo.c managed port
+- compat-outline-demo.pdf: outline_demo.c managed port
+- compat-outline-demo-jp.pdf: outline_demo_jp.c managed port
+- compat-pdf-a-conformance-demo.pdf: pdf_a_conformance.c managed port
+- compat-png-demo.pdf: png_demo.c managed port
+- compat-raw-image-demo.pdf: raw_image_demo.c managed port
+- compat-slide-show-demo.pdf: slide_show_demo.c managed port
+- compat-ttfont-demo.pdf: ttfont_demo.c managed port
+- compat-ttfont-demo-jp.pdf: ttfont_demo_jp.c managed port
+- compat-document-demo.pdf: attach/link/outline demos managed port
+- compat-permission-demo.pdf: permission.c managed port

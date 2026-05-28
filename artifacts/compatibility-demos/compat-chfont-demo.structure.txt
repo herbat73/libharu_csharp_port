@@ -1,0 +1,13 @@
+demo: chfont_demo.c managed port
+file: compat-chfont-demo.pdf
+bytes: 23394
+header: %PDF-1.4
+objects: 15
+pages: 1
+checks:
+  /Type /Page\n: 1 (expected >= 1)
+  /Subtype /Type0: 2 (expected >= 2)
+  /Subtype /CIDFontType2: 2 (expected >= 2)
+  /Encoding /GBK-EUC-H: 1 (expected >= 1)
+  /Encoding /90ms-RKSJ-H: 1 (expected >= 1)
+  /FontFile2: 1 (expected >= 1)

@@ -1,0 +1,19 @@
+demo: image_demo.c managed port
+file: compat-image-demo.pdf
+bytes: 6966
+header: %PDF-1.4
+objects: 11
+pages: 1
+checks:
+  /MediaBox [0 0 550 500]: 1 (expected >= 1)
+  /OpenAction: 1 (expected >= 1)
+  /Subtype /Image: 4 (expected >= 4)
+  /XObject: 5 (expected >= 1)
+  /ImageMask true: 1 (expected >= 1)
+  /Mask : 2 (expected >= 2)
+  /Mask [0 255 0 0 0 255]: 1 (expected >= 1)
+   cm\n: 7 (expected >= 7)
+   Do\n: 7 (expected >= 7)
+  ImageDemo: 1 (expected >= 1)
+  MASKMASK: 2 (expected >= 2)
+  Color Mask: 1 (expected >= 1)
