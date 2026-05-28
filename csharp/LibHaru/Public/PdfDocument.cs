@@ -1641,6 +1641,9 @@ public sealed class PdfDocument : IDisposable
         if (program.Kind == PdfFontProgramKind.CidType0)
             return CreatePredefinedCidFontDictionary(program, encoding);
 
+        if (program.Kind == PdfFontProgramKind.OpenTypeCffCidKeyed && program.SupportsCompositeEncoding)
+            return CreateOpenTypeCffCidFontDictionary(program, encoding, out compositeObjects);
+
         if (program.Kind != PdfFontProgramKind.TrueType || !program.SupportsCompositeEncoding)
             Throw(HaruStatus.InvalidEncoderType, "Composite UTF/Identity encodings require an embedded TrueType font.");
 
@@ -1671,6 +1674,35 @@ public sealed class PdfDocument : IDisposable
         dictionary.Set("DescendantFonts", new PdfArray([descendantObject.Reference]));
         dictionary.Set("ToUnicode", toUnicodeObject.Reference);
         compositeObjects = new PdfCompositeFontObjects(descendant, cidToGidMapStream, toUnicodeStream);
+        return dictionary;
+    }
+
+    private PdfDictionary CreateOpenTypeCffCidFontDictionary(PdfFontProgram program, PdfEncoding encoding, out PdfCompositeFontObjects compositeObjects)
+    {
+        var descendant = new PdfDictionary { Subclass = PdfObjectClass.Font };
+        descendant.SetName("Type", "Font");
+        descendant.SetName("Subtype", "CIDFontType0");
+        descendant.SetName("BaseFont", program.BaseFont);
+        descendant.Set("CIDSystemInfo", CreateCidSystemInfo(program.CidOrdering ?? "Identity", program.CidSupplement));
+        descendant.Set("FontDescriptor", CreateFontDescriptor(program).Reference);
+
+        if (program.Descriptor.MissingWidth != 0)
+            descendant.Set("DW", new PdfInteger(program.Descriptor.MissingWidth));
+
+        descendant.Set("DW2", new PdfArray([new PdfInteger(program.CidVerticalPosition), new PdfInteger(program.CidVerticalDisplacement)]));
+        descendant.Set("W", new PdfArray());
+        var descendantObject = AddObject(descendant);
+        var toUnicodeStream = new PdfStreamObject([]);
+        var toUnicodeObject = AddObject(toUnicodeStream);
+
+        var dictionary = new PdfDictionary { Subclass = PdfObjectClass.Font };
+        dictionary.SetName("Type", "Font");
+        dictionary.SetName("Subtype", "Type0");
+        dictionary.SetName("BaseFont", program.BaseFont);
+        dictionary.SetName("Encoding", encoding.PdfName);
+        dictionary.Set("DescendantFonts", new PdfArray([descendantObject.Reference]));
+        dictionary.Set("ToUnicode", toUnicodeObject.Reference);
+        compositeObjects = new PdfCompositeFontObjects(descendant, null, toUnicodeStream);
         return dictionary;
     }
 
@@ -1973,7 +2005,7 @@ public sealed class PdfDocument : IDisposable
         foreach (var binding in _compositeFontBindings)
         {
             binding.Objects.Descendant.Set("W", BuildCompositeCidWidthsArray(binding.Font.Program, binding.GlyphMap));
-            binding.Objects.CidToGidMapStream.SetData(CreateCidToGidMapData(binding.Font.Program, binding.GlyphMap));
+            binding.Objects.CidToGidMapStream?.SetData(CreateCidToGidMapData(binding.Font.Program, binding.GlyphMap));
             binding.Objects.ToUnicodeStream.SetData(CreateToUnicodeCMapData(binding.GlyphMap));
         }
     }
@@ -2895,7 +2927,7 @@ public sealed class PdfDocument : IDisposable
 
     private sealed record PdfCompositeFontObjects(
         PdfDictionary Descendant,
-        PdfStreamObject CidToGidMapStream,
+        PdfStreamObject? CidToGidMapStream,
         PdfStreamObject ToUnicodeStream);
 
     private readonly record struct JpegHeader(int Width, int Height, int BitsPerComponent, PdfColorSpace ColorSpace);

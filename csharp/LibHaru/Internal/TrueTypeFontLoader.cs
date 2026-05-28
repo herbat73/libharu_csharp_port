@@ -53,6 +53,7 @@ internal static class TrueTypeFontLoader
 
         var advances = ReadAdvanceWidths(data, hmtx.Offset, numGlyphs, numHMetrics);
         var cmap = ReadCMap(data, cmapTable);
+        var cff = isOpenTypeCff ? ReadCffMetadata(data, Required(tables, "CFF ", HaruStatus.TtfMissingTable), numGlyphs) : null;
         var names = ReadNames(data, name);
         var baseFont = names.PostScriptName ?? BuildBaseFontName(names.FamilyName, names.SubfamilyName);
         if (string.IsNullOrWhiteSpace(baseFont))
@@ -118,15 +119,23 @@ internal static class TrueTypeFontLoader
             : null;
         var fontFile = CreateFontFile(data, faceOffset, tables, embedding, isOpenTypeCff, fontFileSubsetBuilder);
 
+        var kind = isOpenTypeCff
+            ? (cff is { IsCidKeyed: true } ? PdfFontProgramKind.OpenTypeCffCidKeyed : PdfFontProgramKind.OpenTypeCff)
+            : PdfFontProgramKind.TrueType;
+        var supportsComposite = !isOpenTypeCff || cff is { IsCidKeyed: true };
+
         return new PdfFontProgram(
-            isOpenTypeCff ? PdfFontProgramKind.OpenTypeCff : PdfFontProgramKind.TrueType,
+            kind,
             baseFont,
             descriptor,
             unicodeWidthResolver: UnicodeWidth,
-            glyphIdResolver: isOpenTypeCff ? null : GlyphId,
-            glyphWidthResolver: isOpenTypeCff ? null : GlyphWidth,
+            glyphIdResolver: supportsComposite ? GlyphId : null,
+            glyphWidthResolver: supportsComposite ? GlyphWidth : null,
+            glyphCidResolver: cff is null ? null : cff.CidOfGlyph,
             fontFile: fontFile,
             fontFileSubsetBuilder: fontFileSubsetBuilder,
+            cidOrdering: cff is { IsCidKeyed: true } ? cff.Ordering : null,
+            cidSupplement: cff?.Supplement ?? 0,
             cidVerticalPosition: yMin,
             cidVerticalDisplacement: yMin - yMax);
     }
@@ -206,6 +215,263 @@ internal static class TrueTypeFontLoader
         }
 
         return tables;
+    }
+
+    private static CffMetadata ReadCffMetadata(byte[] data, TtfTable table, int numGlyphs)
+    {
+        EnsureRange(data, table.Offset, table.Length);
+        if (table.Length < 4)
+            throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF table is truncated.");
+
+        var cffEnd = table.Offset + table.Length;
+        var headerSize = data[table.Offset + 2];
+        if (headerSize < 4 || table.Offset + headerSize > cffEnd)
+            throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF header is invalid.");
+
+        var nameIndex = ReadCffIndex(data, table.Offset + headerSize, cffEnd);
+        var topDictIndex = ReadCffIndex(data, nameIndex.EndOffset, cffEnd);
+        var stringIndex = ReadCffIndex(data, topDictIndex.EndOffset, cffEnd);
+        if (topDictIndex.Objects.Count == 0)
+            throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF top dictionary is missing.");
+
+        var topDict = ParseCffDict(data, topDictIndex.Objects[0]);
+        if (!topDict.TryGetValue(0x0C1E, out var ros) || ros.Count < 3)
+            return new CffMetadata(false, "Identity", 0, IdentityCidMap(numGlyphs));
+
+        var ordering = ResolveCffSid(data, (int)ros[1], stringIndex, "Identity");
+        var supplement = (int)ros[2];
+        var charsetOffset = topDict.TryGetValue(15, out var charset) && charset.Count > 0
+            ? (int)charset[^1]
+            : 0;
+        var gidToCid = charsetOffset > 2
+            ? ReadCffCharset(data, checked(table.Offset + charsetOffset), cffEnd, numGlyphs)
+            : IdentityCidMap(numGlyphs);
+
+        return new CffMetadata(true, ordering, supplement, gidToCid);
+    }
+
+    private static CffIndex ReadCffIndex(byte[] data, int offset, int cffEnd)
+    {
+        EnsureRange(data, offset, 2);
+        var count = ReadUInt16(data, offset);
+        if (count == 0)
+            return new CffIndex([], offset + 2);
+
+        EnsureRange(data, offset + 2, 1);
+        var offSize = data[offset + 2];
+        if (offSize is < 1 or > 4)
+            throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF INDEX offSize is invalid.");
+
+        var offsetsOffset = offset + 3;
+        EnsureRange(data, offsetsOffset, checked((count + 1) * offSize));
+        var objectDataOffset = offsetsOffset + (count + 1) * offSize;
+        var offsets = new int[count + 1];
+        for (var i = 0; i < offsets.Length; i++)
+            offsets[i] = ReadCffOffset(data, offsetsOffset + i * offSize, offSize);
+
+        var objects = new List<CffSlice>(count);
+        for (var i = 0; i < count; i++)
+        {
+            var start = objectDataOffset + offsets[i] - 1;
+            var end = objectDataOffset + offsets[i + 1] - 1;
+            if (offsets[i] < 1 || end < start || end > cffEnd)
+                throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF INDEX object range is invalid.");
+
+            objects.Add(new CffSlice(start, end - start));
+        }
+
+        return new CffIndex(objects, objectDataOffset + offsets[^1] - 1);
+    }
+
+    private static int ReadCffOffset(byte[] data, int offset, int size)
+    {
+        var value = 0;
+        for (var i = 0; i < size; i++)
+            value = (value << 8) | data[offset + i];
+
+        return value;
+    }
+
+    private static Dictionary<int, List<double>> ParseCffDict(byte[] data, CffSlice slice)
+    {
+        var dict = new Dictionary<int, List<double>>();
+        var operands = new List<double>();
+        var offset = slice.Offset;
+        var end = slice.Offset + slice.Length;
+
+        while (offset < end)
+        {
+            var b = data[offset++];
+            if (b <= 21)
+            {
+                var op = b == 12
+                    ? 0x0C00 | data[offset++]
+                    : b;
+                dict[op] = new List<double>(operands);
+                operands.Clear();
+                continue;
+            }
+
+            operands.Add(ReadCffNumber(data, ref offset, end, b));
+        }
+
+        return dict;
+    }
+
+    private static double ReadCffNumber(byte[] data, ref int offset, int end, byte first)
+    {
+        if (first == 28)
+        {
+            EnsureRange(data, offset, 2);
+            var value = ReadInt16(data, offset);
+            offset += 2;
+            return value;
+        }
+
+        if (first == 29)
+        {
+            EnsureRange(data, offset, 4);
+            var value = (int)ReadUInt32(data, offset);
+            offset += 4;
+            return value;
+        }
+
+        if (first == 30)
+        {
+            var builder = new StringBuilder();
+            while (offset < end)
+            {
+                var packed = data[offset++];
+                if (!AppendCffRealNibble(builder, packed >> 4) || !AppendCffRealNibble(builder, packed & 0x0F))
+                    break;
+            }
+
+            return double.TryParse(builder.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value)
+                ? value
+                : 0;
+        }
+
+        if (first is >= 32 and <= 246)
+            return first - 139;
+
+        if (first is >= 247 and <= 250)
+        {
+            EnsureRange(data, offset, 1);
+            return (first - 247) * 256 + data[offset++] + 108;
+        }
+
+        if (first is >= 251 and <= 254)
+        {
+            EnsureRange(data, offset, 1);
+            return -((first - 251) * 256) - data[offset++] - 108;
+        }
+
+        if (first == 255)
+        {
+            EnsureRange(data, offset, 4);
+            var raw = (int)ReadUInt32(data, offset);
+            offset += 4;
+            return raw / 65536.0;
+        }
+
+        throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF dictionary number is invalid.");
+    }
+
+    private static bool AppendCffRealNibble(StringBuilder builder, int nibble)
+    {
+        switch (nibble)
+        {
+            case <= 9:
+                builder.Append((char)('0' + nibble));
+                return true;
+            case 0xA:
+                builder.Append('.');
+                return true;
+            case 0xB:
+                builder.Append('E');
+                return true;
+            case 0xC:
+                builder.Append("E-");
+                return true;
+            case 0xE:
+                builder.Append('-');
+                return true;
+            case 0xF:
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    private static string ResolveCffSid(byte[] data, int sid, CffIndex stringIndex, string fallback)
+    {
+        const int standardStringCount = 391;
+        if (sid < standardStringCount)
+            return fallback;
+
+        var customIndex = sid - standardStringCount;
+        if ((uint)customIndex >= (uint)stringIndex.Objects.Count)
+            return fallback;
+
+        var slice = stringIndex.Objects[customIndex];
+        return slice.Length == 0 ? fallback : Encoding.ASCII.GetString(data, slice.Offset, slice.Length);
+    }
+
+    private static int[] ReadCffCharset(byte[] data, int offset, int cffEnd, int numGlyphs)
+    {
+        EnsureRange(data, offset, 1);
+        if (offset >= cffEnd)
+            throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF charset offset is outside the CFF table.");
+
+        var gidToCid = IdentityCidMap(numGlyphs);
+        var format = data[offset++];
+        var glyphId = 1;
+        switch (format)
+        {
+            case 0:
+                while (glyphId < numGlyphs)
+                {
+                    EnsureRange(data, offset, 2);
+                    gidToCid[glyphId++] = ReadUInt16(data, offset);
+                    offset += 2;
+                }
+                break;
+            case 1:
+                while (glyphId < numGlyphs)
+                {
+                    EnsureRange(data, offset, 3);
+                    var first = ReadUInt16(data, offset);
+                    var left = data[offset + 2];
+                    offset += 3;
+                    for (var i = 0; i <= left && glyphId < numGlyphs; i++)
+                        gidToCid[glyphId++] = first + i;
+                }
+                break;
+            case 2:
+                while (glyphId < numGlyphs)
+                {
+                    EnsureRange(data, offset, 4);
+                    var first = ReadUInt16(data, offset);
+                    var left = ReadUInt16(data, offset + 2);
+                    offset += 4;
+                    for (var i = 0; i <= left && glyphId < numGlyphs; i++)
+                        gidToCid[glyphId++] = first + i;
+                }
+                break;
+            default:
+                throw new HaruException(HaruStatus.TtfInvalidFormat, "CFF charset format is unsupported.");
+        }
+
+        return gidToCid;
+    }
+
+    private static int[] IdentityCidMap(int numGlyphs)
+    {
+        var gidToCid = new int[numGlyphs];
+        for (var i = 0; i < gidToCid.Length; i++)
+            gidToCid[i] = i;
+
+        return gidToCid;
     }
 
     private static ushort[] ReadAdvanceWidths(byte[] data, int offset, int numGlyphs, int numHMetrics)
@@ -1131,6 +1397,22 @@ internal static class TrueTypeFontLoader
     private readonly record struct TableBuildRecord(string Tag, uint Checksum, int Offset, int Length, byte[] Data);
 
     private readonly record struct TtfNames(string? PostScriptName, string? FamilyName, string? SubfamilyName);
+
+    private sealed class CffMetadata(bool isCidKeyed, string ordering, int supplement, int[] gidToCid)
+    {
+        internal bool IsCidKeyed { get; } = isCidKeyed;
+
+        internal string Ordering { get; } = ordering;
+
+        internal int Supplement { get; } = supplement;
+
+        internal int CidOfGlyph(int glyphId) =>
+            glyphId >= 0 && glyphId < gidToCid.Length ? gidToCid[glyphId] : 0;
+    }
+
+    private sealed record CffIndex(IReadOnlyList<CffSlice> Objects, int EndOffset);
+
+    private readonly record struct CffSlice(int Offset, int Length);
 
     private abstract class CMap
     {

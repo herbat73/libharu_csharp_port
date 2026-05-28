@@ -1,0 +1,28 @@
+{
+  "name": "Noto Sans SC",
+  "family": "Noto Sans SC",
+  "description": "Subset of NotoSansSC-Regular used as a small CID-keyed OpenType/CFF fixture for smoke-test Type0 CIDFontType0 embedding coverage.",
+  "author": "Adobe and Google",
+  "website": "https://github.com/notofonts/noto-cjk",
+  "source": "https://pdfium.googlesource.com/pdfium/+/refs/heads/chromium/7011/third_party/NotoSansCJK/NotoSansSC-Regular.subset.otf",
+  "category": "Sans Serif",
+  "tags": [
+    "sans-serif",
+    "cjk",
+    "cff",
+    "cid-keyed",
+    "subset"
+  ],
+  "languages": [
+    "zh-Hans"
+  ],
+  "styles": [
+    "Regular"
+  ],
+  "sampleText": "这是第一。二行",
+  "formats": [
+    "otf"
+  ],
+  "license": "SIL Open Font License 1.1",
+  "sha256": "f58a19c55389f4cc868fbceb7541ed4c926c7f8de00bd115e9e93baff3b9bba0"
+}

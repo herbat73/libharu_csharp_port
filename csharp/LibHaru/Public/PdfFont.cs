@@ -197,7 +197,11 @@ public sealed class PdfFont
         foreach (var unicode in EnumerateUnicodeScalars(text))
         {
             var glyphId = Program.MarkUnicodeUsed(unicode);
-            var cid = CompositeGlyphMap?.GetOrCreateIdentityCid(unicode, glyphId) ?? glyphId;
+            var cid = Program.UsesFontCidCodes
+                ? Program.CidOfGlyph(glyphId)
+                : CompositeGlyphMap?.GetOrCreateIdentityCid(unicode, glyphId) ?? glyphId;
+            if (Program.UsesFontCidCodes)
+                CompositeGlyphMap?.Register(cid, glyphId, new PdfCompositeCharCode(cid, 2), unicode);
             output.WriteByte((byte)(cid >> 8));
             output.WriteByte((byte)(cid & 0xFF));
         }

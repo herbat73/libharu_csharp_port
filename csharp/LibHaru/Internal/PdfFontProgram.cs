@@ -5,6 +5,7 @@ internal enum PdfFontProgramKind
     Type1,
     TrueType,
     OpenTypeCff,
+    OpenTypeCffCidKeyed,
     CidType0
 }
 
@@ -15,6 +16,7 @@ internal sealed class PdfFontProgram
     private readonly Func<int, int>? _unicodeWidthResolver;
     private readonly Func<int, int>? _glyphIdResolver;
     private readonly Func<int, int>? _glyphWidthResolver;
+    private readonly Func<int, int>? _glyphCidResolver;
     private readonly IReadOnlyDictionary<int, int> _cidWidthLookup;
     private readonly Func<PdfFontSubsetRequest, PdfFontSubsetData>? _fontFileSubsetBuilder;
     private readonly SortedSet<int> _usedGlyphIds = [0];
@@ -30,6 +32,7 @@ internal sealed class PdfFontProgram
         Func<int, int>? unicodeWidthResolver = null,
         Func<int, int>? glyphIdResolver = null,
         Func<int, int>? glyphWidthResolver = null,
+        Func<int, int>? glyphCidResolver = null,
         PdfFontFile? fontFile = null,
         Func<PdfFontSubsetRequest, PdfFontSubsetData>? fontFileSubsetBuilder = null,
         bool isBase14 = false,
@@ -48,6 +51,7 @@ internal sealed class PdfFontProgram
         _unicodeWidthResolver = unicodeWidthResolver;
         _glyphIdResolver = glyphIdResolver;
         _glyphWidthResolver = glyphWidthResolver;
+        _glyphCidResolver = glyphCidResolver;
         FontFile = fontFile;
         _fontFileSubsetBuilder = fontFileSubsetBuilder;
         IsBase14 = isBase14;
@@ -85,6 +89,8 @@ internal sealed class PdfFontProgram
     internal int CidVerticalDisplacement { get; }
 
     internal bool SupportsCompositeEncoding => _glyphIdResolver is not null && _glyphWidthResolver is not null;
+
+    internal bool UsesFontCidCodes => Kind == PdfFontProgramKind.OpenTypeCffCidKeyed;
 
     internal PdfIndirectObject? DescriptorObject { get; set; }
 
@@ -156,6 +162,8 @@ internal sealed class PdfFontProgram
     }
 
     internal int GlyphIdOfUnicode(int unicode) => _glyphIdResolver?.Invoke(unicode) ?? 0;
+
+    internal int CidOfGlyph(int glyphId) => _glyphCidResolver?.Invoke(glyphId) ?? glyphId;
 
     internal int WidthOfGlyph(int glyphId)
     {
