@@ -20,7 +20,7 @@ dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj
 
 The smoke test writes `artifacts/libharu-managed-smoke.pdf`.
 Compatibility demo ports write generated PDFs and `.structure.txt` regression profiles under `artifacts/compatibility-demos`.
-When Poppler `pdftoppm` is available, selected first-page renders are checked against `csharp/LibHaru.SmokeTests/fixtures/visual-reference.tsv` and write pixel profiles under `artifacts/rendered`.
+When Poppler `pdftoppm` is available, selected first-page renders are checked against `csharp/LibHaru.SmokeTests/fixtures/visual-reference.tsv` and write pixel profiles under `artifacts/rendered`. Set `LIBHARU_PDFTOPPM` to a `pdftoppm` executable or containing directory when it is not on `PATH`; set `LIBHARU_REFRESH_VISUAL_REFERENCES=1` to refresh the TSV from current renders.
 Exact upstream/reference PDF comparisons are manifest-driven through `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv`; rows become byte-for-byte or SHA-256 checks as soon as stable upstream fixtures are added.
 
 ## Current Managed Slice
@@ -32,7 +32,7 @@ Verification on 2026-05-28:
 - `dotnet build ..\LibHaruSharp.sln` succeeded with 0 warnings and 0 errors.
 - `dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj` generated the managed smoke PDFs, 3 real-font fixture PDFs, 28 compatibility demo PDFs, and passed 39 generated-PDF structural reader checks.
 - The smoke harness found no exact upstream reference-output fixtures configured yet.
-- Optional Poppler visual render checks were skipped because `pdftoppm` was not available on `PATH` in this environment.
+- Optional Poppler visual render checks passed with portable Poppler `pdftoppm` 26.02.0 via `LIBHARU_PDFTOPPM`; 10 first-page visual reference profiles were refreshed.
 - The local `include/hpdf.h` exported `HPDF_*` function names were audited against the managed `HPdf` facade; all exported function names are represented.
 
 - `hpdf_objects.c`, `hpdf_array.c`, `hpdf_dict.c`, `hpdf_name.c`, `hpdf_number.c`, `hpdf_real.c`, `hpdf_string.c`: migrated in `Internal/PdfObjects.cs`, including direct/proxy ownership semantics, exact typed array/dictionary base/subclass lookup validation for all migrated object wrappers, managed stream-vs-dictionary type guards, direct raw objects, and encrypted string/binary writing.
@@ -51,6 +51,7 @@ Verification on 2026-05-28:
 - `hpdf_annotation.c`: migrated for link, URI link, text, free text, line, square/circle, text-markup, popup, stamp, projection, widget, and basic 3D annotations, including border, highlight, icon, color, opened, contents, title, JavaScript action, markup/callout/interior-color variants, generic text-markup, widget appearance, projection ExData setters, specialized widget white-while-print appearances, and named normal/rollover/down appearance streams with appearance-local Font/XObject resources.
 - `hpdf_namedict.c`, `hpdf_pdfa.c`: migrated for embedded file streams/filespecs, embedded-file name trees, catalog associated files, PDF/A conformance metadata, output intent dictionaries with ICC profile streams, ICC memory/file loading aliases, typed validators, save-time PDF/A output-intent/XMP/conformance guardrails, PDF/A embedded-file relationship defaults/restrictions, and large multi-leaf name-tree fixtures.
 - `hpdf_u3d.c`, `hpdf_ext_gstate.c`, `hpdf_shading.c`: migrated for U3D streams, 3D views with perspective/orthographic projection, matrix cameras, cross-section toggles, nodes, C3D/PD3 measures, ExData, extended graphics states, typed validators, and axial/radial/free-form triangle mesh shadings.
+- Upstream libharu `v2.4.6`/HEAD was audited on 2026-05-28 for annotation and 3D API/fixture additions beyond the local headers; no additional annotation or 3D variants were present.
 - `demo/arc_demo.c`, `demo/attach.c`, `demo/character_map.c`, `demo/chfont_demo.c`, `demo/encoding_list.c`, `demo/encryption.c`, `demo/ext_gstate_demo.c`, `demo/font_demo.c`, `demo/grid_sheet.c`, `demo/image_demo.c`, `demo/jpeg_demo.c`, `demo/jpfont_demo.c`, `demo/line_demo.c`, `demo/link_annotation.c`, `demo/outline_demo.c`, `demo/outline_demo_jp.c`, `demo/pdf_a_conformance.c`, `demo/permission.c`, `demo/png_demo.c`, `demo/raw_image_demo.c`, `demo/slide_show_demo.c`, `demo/text_annotation.c`, `demo/text_demo.c`, `demo/text_demo2.c`, `demo/ttfont_demo.c`, and `demo/ttfont_demo_jp.c`: migrated as managed compatibility demo ports that run from the smoke app and generate structural PDF profiles for regression coverage. `demo/make_rawimage.c` is tracked in the generated inventory as a utility fixture generator rather than a PDF demo.
 - `bindings/c#`: intentionally not used as an implementation source. The managed `HPdf` facade has callable coverage for the exported function names in the local `include/hpdf.h` audit, with low-level handles represented by managed equivalents where appropriate.
 
@@ -59,12 +60,12 @@ Verification on 2026-05-28:
 The local source migration is complete for the checked-in headers and C modules. The items below remain open only for future fixture drops, external verification tools, or newer upstream APIs.
 
 - [ ] Add exact upstream C-output PDF or SHA-256 fixture rows to `csharp/LibHaru.SmokeTests/fixtures/reference-output.tsv` when stable upstream outputs are checked in.
-- [ ] Enable and refresh optional Poppler visual regression profiles when `pdftoppm` is available on the verification machine.
+- [x] Enable and refresh optional Poppler visual regression profiles when `pdftoppm` is available on the verification machine.
 - [x] Add simple OpenType/CFF font coverage, deeper vertical TrueType metrics, and an optional checked-in real-font fixture harness.
 - [x] Check in additional real-font fixtures under `csharp/LibHaru.SmokeTests/fixtures/fonts` to broaden compatibility coverage beyond the bundled demo TTF.
 - [x] Broaden image compatibility coverage with optional external JPEG/PNG/raw/CCITT fixtures.
 - [x] Add document-owned error paths and typed validators for any newly migrated C modules or object subclasses.
-- [ ] Add further annotation and 3D variants only if upstream introduces APIs or fixtures outside the current local headers.
+- [x] Add further annotation and 3D variants only if upstream introduces APIs or fixtures outside the current local headers. Audited upstream libharu `v2.4.6`/HEAD; no additional variants were found.
 - [ ] Revisit security-handler support only if a newer upstream source exposes later security revisions; the checked-in C source only exposes revision 2/3 Standard Security.
 
 ## Source Module Map

@@ -5,18 +5,29 @@ using System.Text;
 
 public static class VisualRegression
 {
+    private const string PdftoppmPathEnvVar = "LIBHARU_PDFTOPPM";
+    private const string RefreshReferencesEnvVar = "LIBHARU_REFRESH_VISUAL_REFERENCES";
+
     public static void TryRenderSmokePdfs(string artifactsRoot, string fixturePath, params string[] pdfPaths)
     {
-        var fixtures = LoadFixtures(fixturePath);
-        var pdftoppm = FindOnPath("pdftoppm");
+        var pdftoppm = FindPdftoppm();
         if (pdftoppm is null)
         {
-            Console.WriteLine("Skipped visual render checks; pdftoppm was not found on PATH.");
+            Console.WriteLine($"Skipped visual render checks; pdftoppm was not found on PATH. Set {PdftoppmPathEnvVar} to a pdftoppm executable or containing directory to enable them.");
             return;
         }
 
+        var refreshReferences = IsEnabled(Environment.GetEnvironmentVariable(RefreshReferencesEnvVar));
+        var fixtures = File.Exists(fixturePath)
+            ? LoadFixtures(fixturePath)
+            : new Dictionary<string, VisualFixture>(StringComparer.OrdinalIgnoreCase);
+        if (!refreshReferences && fixtures.Count == 0)
+            throw new FileNotFoundException("Cannot load visual reference fixtures.", fixturePath);
+
         var renderDir = Path.Combine(artifactsRoot, "rendered");
         Directory.CreateDirectory(renderDir);
+        var preferredOrder = new List<string>();
+        var seenPdfNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var pdfPath in pdfPaths)
         {
@@ -24,19 +35,32 @@ public static class VisualRegression
                 throw new FileNotFoundException("Cannot render missing PDF.", pdfPath);
 
             var pdfName = Path.GetFileName(pdfPath);
-            if (!fixtures.TryGetValue(pdfName, out var fixture))
-                throw new InvalidOperationException($"Missing visual fixture for {pdfName}.");
+            if (seenPdfNames.Add(pdfName))
+                preferredOrder.Add(pdfName);
 
             var outputPrefix = Path.Combine(renderDir, Path.GetFileNameWithoutExtension(pdfPath));
-            Run(pdftoppm, $"-png -singlefile -f 1 -l 1 \"{pdfPath}\" \"{outputPrefix}\"");
+            Run(pdftoppm, "-png", "-singlefile", "-f", "1", "-l", "1", pdfPath, outputPrefix);
             var pngPath = outputPrefix + ".png";
             var pngBytes = File.ReadAllBytes(pngPath);
             var profile = ReadPngProfile(pngBytes, pngPath);
+
+            if (refreshReferences)
+                fixtures[pdfName] = CreateRefreshedFixture(pdfName, profile);
+
+            if (!fixtures.TryGetValue(pdfName, out var fixture))
+                throw new InvalidOperationException($"Missing visual fixture for {pdfName}. Set {RefreshReferencesEnvVar}=1 to refresh {fixturePath} from the current renders.");
+
             File.WriteAllText(outputPrefix + ".render-profile.txt", BuildProfile(pdfName, fixture, profile));
             CheckProfile(pdfName, fixture, profile);
         }
 
-        Console.WriteLine($"Rendered and checked {pdfPaths.Length} PDF reference page(s) in {renderDir}");
+        if (refreshReferences)
+        {
+            WriteFixtures(fixturePath, fixtures, preferredOrder);
+            Console.WriteLine($"Refreshed {fixtures.Count} visual reference fixture(s) in {fixturePath}");
+        }
+
+        Console.WriteLine($"Rendered and checked {pdfPaths.Length} PDF reference page(s) in {renderDir} using {pdftoppm}");
     }
 
     private static Dictionary<string, VisualFixture> LoadFixtures(string fixturePath)
@@ -94,6 +118,61 @@ public static class VisualRegression
             $"colorType: {profile.ColorType}",
             string.Empty
         ]);
+
+    private static VisualFixture CreateRefreshedFixture(string pdfName, PngProfile profile)
+    {
+        var minNonWhitePixels = profile.NonWhitePixels == 0
+            ? 0
+            : Math.Max(1, (int)Math.Floor(profile.NonWhitePixels * 0.90));
+
+        var minColorCount = profile.ColorCount <= 2
+            ? profile.ColorCount
+            : Math.Max(2, (int)Math.Floor(profile.ColorCount * 0.50));
+
+        return new VisualFixture(
+            pdfName,
+            profile.Width,
+            profile.Height,
+            minNonWhitePixels,
+            minColorCount);
+    }
+
+    private static void WriteFixtures(string fixturePath, Dictionary<string, VisualFixture> fixtures, IReadOnlyList<string> preferredOrder)
+    {
+        var directory = Path.GetDirectoryName(fixturePath);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
+        using var writer = new StreamWriter(fixturePath, append: false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        writer.WriteLine("# pdf\tmin_width\tmin_height\tmin_non_white_pixels\tmin_color_count");
+        writer.WriteLine($"# Refresh with {RefreshReferencesEnvVar}=1 when pdftoppm is available.");
+
+        var written = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pdfName in preferredOrder)
+        {
+            if (fixtures.TryGetValue(pdfName, out var fixture) && written.Add(pdfName))
+                WriteFixtureLine(writer, fixture);
+        }
+
+        foreach (var fixture in fixtures.Values.OrderBy(static fixture => fixture.PdfName, StringComparer.OrdinalIgnoreCase))
+        {
+            if (written.Add(fixture.PdfName))
+                WriteFixtureLine(writer, fixture);
+        }
+    }
+
+    private static void WriteFixtureLine(TextWriter writer, VisualFixture fixture)
+    {
+        writer.Write(fixture.PdfName);
+        writer.Write('\t');
+        writer.Write(fixture.MinWidth.ToString(CultureInfo.InvariantCulture));
+        writer.Write('\t');
+        writer.Write(fixture.MinHeight.ToString(CultureInfo.InvariantCulture));
+        writer.Write('\t');
+        writer.Write(fixture.MinNonWhitePixels.ToString(CultureInfo.InvariantCulture));
+        writer.Write('\t');
+        writer.WriteLine(fixture.MinColorCount.ToString(CultureInfo.InvariantCulture));
+    }
 
     private static PngProfile ReadPngProfile(byte[] bytes, string path)
     {
@@ -228,40 +307,89 @@ public static class VisualRegression
         return pb <= pc ? up : upperLeft;
     }
 
+    private static string? FindPdftoppm()
+    {
+        var configured = Environment.GetEnvironmentVariable(PdftoppmPathEnvVar);
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            var resolved = ResolveConfiguredPdftoppm(configured);
+            if (resolved is not null)
+                return resolved;
+
+            throw new FileNotFoundException($"The {PdftoppmPathEnvVar} value does not point to pdftoppm.", configured);
+        }
+
+        return FindOnPath("pdftoppm");
+    }
+
+    private static string? ResolveConfiguredPdftoppm(string configured)
+    {
+        var candidate = configured.Trim().Trim('"');
+        if (File.Exists(candidate))
+            return candidate;
+
+        if (Directory.Exists(candidate))
+            return FindInDirectory(candidate, "pdftoppm");
+
+        return null;
+    }
+
     private static string? FindOnPath(string fileName)
     {
         var path = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrWhiteSpace(path))
             return null;
 
-        var extensions = OperatingSystem.IsWindows()
-            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.BAT;.CMD").Split(';', StringSplitOptions.RemoveEmptyEntries)
-            : [string.Empty];
-
         foreach (var directory in path.Split(Path.PathSeparator))
         {
             if (string.IsNullOrWhiteSpace(directory))
                 continue;
 
-            foreach (var extension in extensions)
-            {
-                var candidate = Path.Combine(directory, fileName + extension);
-                if (File.Exists(candidate))
-                    return candidate;
-            }
+            var candidate = FindInDirectory(directory, fileName);
+            if (candidate is not null)
+                return candidate;
         }
 
         return null;
     }
 
-    private static void Run(string fileName, string arguments)
+    private static string? FindInDirectory(string directory, string fileName)
     {
-        using var process = Process.Start(new ProcessStartInfo(fileName, arguments)
+        var extensions = OperatingSystem.IsWindows()
+            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.BAT;.CMD").Split(';', StringSplitOptions.RemoveEmptyEntries)
+            : [string.Empty];
+
+        foreach (var extension in extensions)
+        {
+            var candidate = Path.Combine(directory, fileName + extension);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    private static bool IsEnabled(string? value)
+    {
+        var normalized = value?.Trim();
+        return normalized is not null
+            && (normalized == "1"
+                || normalized.Equals("true", StringComparison.OrdinalIgnoreCase)
+                || normalized.Equals("yes", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void Run(string fileName, params string[] arguments)
+    {
+        var startInfo = new ProcessStartInfo(fileName)
         {
             UseShellExecute = false,
             RedirectStandardError = true,
             RedirectStandardOutput = true
-        });
+        };
+        foreach (var argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+
+        using var process = Process.Start(startInfo);
 
         if (process is null)
             throw new InvalidOperationException($"Could not start {fileName}.");

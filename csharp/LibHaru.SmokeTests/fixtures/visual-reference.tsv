@@ -1,11 +1,12 @@
 # pdf	min_width	min_height	min_non_white_pixels	min_color_count
-libharu-managed-smoke.pdf	500	500	1000	2
-libharu-managed-compression.pdf	500	500	100	2
-libharu-managed-fonts.pdf	500	500	500	2
-libharu-managed-document-features.pdf	500	500	500	2
-libharu-managed-images.pdf	500	500	500	2
-libharu-managed-name-trees.pdf	500	500	100	2
-compat-font-demo.pdf	500	500	100	2
-compat-image-demo.pdf	500	500	100	2
-compat-image-fixtures-demo.pdf	500	500	100	2
-compat-pdf-a-conformance-demo.pdf	500	500	500	2
+# Refresh with LIBHARU_REFRESH_VISUAL_REFERENCES=1 when pdftoppm is available.
+libharu-managed-smoke.pdf	1754	1241	41873	138
+libharu-managed-compression.pdf	1241	1754	20349	4595
+libharu-managed-fonts.pdf	1241	1754	16376	128
+libharu-managed-document-features.pdf	1241	1754	1956268	10558
+libharu-managed-images.pdf	1241	1754	104426	7773
+libharu-managed-name-trees.pdf	1241	1754	1801	115
+compat-font-demo.pdf	1241	1754	116405	128
+compat-image-demo.pdf	1146	1042	43224	1034
+compat-image-fixtures-demo.pdf	1241	1754	141581	14716
+compat-pdf-a-conformance-demo.pdf	1275	1650	11258	128
