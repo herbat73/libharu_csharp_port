@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibHaru", "LibHaru\LibHaru.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibHaru.SmokeTests", "LibHaru.SmokeTests\LibHaru.SmokeTests.csproj", "{6A823F04-C501-4598-A365-7BD5E07AB48B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibHaru.Tests", "LibHaru.Tests\LibHaru.Tests.csproj", "{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{6A823F04-C501-4598-A365-7BD5E07AB48B}.Release|x64.Build.0 = Release|Any CPU
 		{6A823F04-C501-4598-A365-7BD5E07AB48B}.Release|x86.ActiveCfg = Release|Any CPU
 		{6A823F04-C501-4598-A365-7BD5E07AB48B}.Release|x86.Build.0 = Release|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Debug|x64.Build.0 = Debug|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Debug|x86.Build.0 = Debug|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Release|x64.ActiveCfg = Release|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Release|x64.Build.0 = Release|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Release|x86.ActiveCfg = Release|Any CPU
+		{34D64F9A-2FA7-42DA-B8D5-FBD95AE48F43}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

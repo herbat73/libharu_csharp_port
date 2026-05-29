@@ -34,7 +34,8 @@ complicated internal structure of PDF.
 # The differences from the orginal version 
 
 
-The biggest difference is that all the code is written in C# together with dotnet 9 framework, which is the result of a full port of the original [LibHaru C](https://github.com/libharu/libharu) library mostly using Codex Cli tool with ChatGpt 5.5 model.
+The biggest difference is that all the source code is rewritten in C# together with dotnet 9 framework. 
+It is the result of a Codex-assisted experimental port/test of the original [LibHaru C](https://github.com/libharu/libharu) library.
 
 Old pure c LibHaru source demos are located in the demos/original folder and are stored to generate smoke test artifacts (artifacts folder) and PDF comparisons.
 
@@ -85,4 +86,4 @@ to the following restrictions:
 3. Adobe Systems Inc.
    We thank Adobe Systems Inc. for publishing PDF specification.
 
-4. ChatGpt.com for providing Codex along with the ChatGPT 5.5 model for migration from c to c# process.   
+4. ChatGpt.com for providing Codex along with the ChatGPT 5.5 model for migration from C to C# process.   

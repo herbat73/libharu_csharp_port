@@ -24,3 +24,13 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build -c Release /p:CI=true --no-restore
+      - name: Test
+        run: dotnet test LibHaru.Tests\LibHaru.Tests.csproj-c Release --logger trx --logger GitHubActions --results-directory ./test-results/ /p:CI=true
+      - name: .NET Test Results
+        uses: dorny/test-reporter@v2
+        continue-on-error: true
+        if: success() || failure()
+        with:
+          name: .NET Test Results
+          path: 'test-results/*.trx'
+          reporter: dotnet-trx        
