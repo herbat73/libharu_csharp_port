@@ -8,9 +8,9 @@ From the repository root:
 
 ```powershell
 dotnet build LibHaruSharp.sln
-dotnet run --project LibHaru.SmokeTests\LibHaru.SmokeTests.csproj
-dotnet run --project LibHaru.Tests\LibHaru.Tests.csproj
-dotnet test LibHaru.Tests\LibHaru.Tests.csproj -c Release
+dotnet run --project LibHaru.SmokeTests/LibHaru.SmokeTests.csproj
+dotnet run --project LibHaru.Tests/LibHaru.Tests.csproj
+dotnet test LibHaru.Tests/LibHaru.Tests.csproj -c Release
 ```
 
 The smoke test writes `artifacts/libharu-managed-smoke.pdf` and companion coverage PDFs under `artifacts`.
