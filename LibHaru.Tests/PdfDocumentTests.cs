@@ -173,6 +173,135 @@ public sealed class PdfDocumentTests
     }
 
     [Fact]
+    public void FileBasedResourceLoaders_CreateExpectedPublicResources()
+    {
+        using var document = new PdfDocument();
+        var scriptPath = TestHelpers.NewArtifactPath("script.js");
+        var modelPath = TestHelpers.NewArtifactPath("model.u3d");
+        var rawPath = TestHelpers.NewArtifactPath("raw-rgb.bin");
+        var jpegPath = TestHelpers.NewArtifactPath("image.jpg");
+        var iccPath = TestHelpers.NewArtifactPath("profile.icc");
+
+        File.WriteAllText(scriptPath, "app.alert('file');");
+        File.WriteAllBytes(modelPath, [1, 2, 3, 4]);
+        File.WriteAllBytes(rawPath, [255, 0, 0, 0, 255, 0]);
+        File.WriteAllBytes(jpegPath, TestHelpers.MinimalJpeg());
+        File.WriteAllBytes(iccPath, [1, 2, 3, 4]);
+
+        var javaScript = document.LoadJavaScriptFromFile(scriptPath);
+        var u3d = document.LoadU3DFromFile(modelPath);
+        var raw = document.LoadRawImageFromFile(rawPath, 2, 1, PdfColorSpace.DeviceRgb);
+        var jpeg = document.LoadJpegImageFromFile(jpegPath);
+        var profile = document.LoadIccProfileFromFile(iccPath, 3);
+
+        Assert.NotNull(javaScript);
+        Assert.NotNull(u3d);
+        Assert.Equal(new PdfPoint(2, 1), raw.Size);
+        Assert.Equal(new PdfPoint(1, 1), jpeg.Size);
+        Assert.Equal(3, profile.ComponentCount);
+    }
+
+    [Fact]
+    public void PngFileLoaders_HandleImmediateDelayedAndManagedColorSpaces()
+    {
+        using var document = new PdfDocument();
+        var pngPath = TestHelpers.NewArtifactPath("rgb.png");
+        var delayedPngPath = TestHelpers.NewArtifactPath("rgb-delayed.png");
+        var calibratedPngPath = TestHelpers.NewArtifactPath("rgb-calibrated.png");
+        var iccPngPath = TestHelpers.NewArtifactPath("rgb-icc.png");
+
+        File.WriteAllBytes(pngPath, TestHelpers.MinimalPng());
+        File.WriteAllBytes(delayedPngPath, TestHelpers.MinimalPng(srgb: true));
+        File.WriteAllBytes(calibratedPngPath, TestHelpers.MinimalPng(gamma: true, chromaticities: true));
+        File.WriteAllBytes(iccPngPath, TestHelpers.MinimalPng(iccProfile: [1, 2, 3, 4]));
+
+        var png = document.LoadPngImageFromFile(pngPath);
+        var delayed = document.LoadPngImageFromFile2(delayedPngPath);
+        var calibrated = document.LoadPngImageFromMem(File.ReadAllBytes(calibratedPngPath));
+        var icc = document.LoadPngImageFromMem(File.ReadAllBytes(iccPngPath));
+
+        Assert.Equal(new PdfPoint(1, 1), png.Size);
+        Assert.Equal(new PdfPoint(1, 1), delayed.Size);
+        Assert.Equal(new PdfPoint(1, 1), calibrated.Size);
+        Assert.Equal(new PdfPoint(1, 1), icc.Size);
+
+        TestHelpers.AssertPdf(document.SaveToStream());
+    }
+
+    [Fact]
+    public void FileBasedResourceLoaders_ReportFileOpenErrors()
+    {
+        using var document = new PdfDocument();
+        var missingPath = TestHelpers.NewArtifactPath("missing.bin");
+
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadJavaScriptFromFile(missingPath));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadU3DFromFile(missingPath));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadRawImageFromFile(missingPath, 1, 1, PdfColorSpace.DeviceRgb));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadJpegImageFromFile(missingPath));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadIccProfileFromFile(missingPath, 3));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadPngImageFromFile(missingPath));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadPngImageFromFile2(missingPath));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.MissingFileNameEntry,
+            () => document.LoadTTFontFromFile2("", 0, false));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidTtcIndex,
+            () => document.LoadTTFontFromFile2(missingPath, -1, false));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadTTFontFromFile2(missingPath, 0, false));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadTTFontFromFile(missingPath, false));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.GetTTFontDefFromFile(missingPath, false));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.FileOpenError,
+            () => document.LoadType1FontFromFile(missingPath, null));
+    }
+
+    [Fact]
+    public void JpegLoader_RejectsMalformedHeaders()
+    {
+        using var document = new PdfDocument();
+
+        TestHelpers.AssertHaruException(HaruStatus.InvalidJpegData,
+            () => document.LoadJpegImageFromMem([0xFF, 0xD9]));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidJpegData,
+            () => document.LoadJpegImageFromMem([0xFF, 0xD8, 0x00, 0xFF, 0xE0, 0x00]));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidJpegData,
+            () => document.LoadJpegImageFromMem([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x01]));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidJpegData,
+            () => document.LoadJpegImageFromMem([0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x07, 0x08, 0x00, 0x01, 0x00, 0x01]));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.UnsupportedJpegFormat,
+            () => document.LoadJpegImageFromMem(TestHelpers.MinimalJpeg(components: 2)));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidImage,
+            () => document.LoadJpegImageFromMem(TestHelpers.MinimalJpeg(width: 0)));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.UnsupportedJpegFormat,
+            () => document.LoadJpegImageFromMem([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0xFF, 0xD9]));
+    }
+
+    [Fact]
     public void Save_RejectsNonWritableStream()
     {
         using var document = CreateTextDocument("stream");
@@ -231,6 +360,20 @@ public sealed class PdfDocumentTests
         embeddedFile.SetDescription("Test attachment");
         embeddedFile.SetSubtype("text/plain");
         embeddedFile.SetAFRelationship(PdfAFRelationship.Data);
+        foreach (var relationship in new[]
+                 {
+                     PdfAFRelationship.Source,
+                     PdfAFRelationship.Alternative,
+                     PdfAFRelationship.Supplement,
+                     PdfAFRelationship.EncryptedPayload,
+                     PdfAFRelationship.FormData,
+                     PdfAFRelationship.Schema,
+                     PdfAFRelationship.Unspecified
+                 })
+        {
+            embeddedFile.SetAFRelationship(relationship);
+        }
+
         embeddedFile.SetSize(18);
         embeddedFile.SetCreationDate(new DateTimeOffset(2024, 2, 3, 4, 5, 6, TimeSpan.Zero));
         embeddedFile.SetLastModificationDate(new DateTimeOffset(2024, 2, 4, 4, 5, 6, TimeSpan.Zero));

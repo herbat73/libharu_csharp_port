@@ -35,6 +35,33 @@ public sealed class PdfPageTests
     }
 
     [Fact]
+    public void SetSize_CoversAllStandardPageSizes()
+    {
+        using var document = new PdfDocument();
+        var page = document.AddPage();
+
+        foreach (var size in new[]
+                 {
+                     PdfPageSize.Legal,
+                     PdfPageSize.A3,
+                     PdfPageSize.A5,
+                     PdfPageSize.B4,
+                     PdfPageSize.B5,
+                     PdfPageSize.Executive,
+                     PdfPageSize.US4x6,
+                     PdfPageSize.US4x8,
+                     PdfPageSize.US5x7,
+                     PdfPageSize.Comm10
+                 })
+        {
+            page.SetSize(size, PdfPageDirection.Portrait);
+
+            Assert.True(page.Width > 0);
+            Assert.True(page.Height > 0);
+        }
+    }
+
+    [Fact]
     public void PageSizeBoundaryAndRotate_RejectInvalidValues()
     {
         using var document = new PdfDocument();
@@ -186,6 +213,44 @@ public sealed class PdfPageTests
 
         Assert.Equal(HaruStatus.OK, status);
         Assert.Equal(14u, length);
+    }
+
+    [Fact]
+    public void TextRect_CoversAlignmentWrappingAndInsufficientSpace()
+    {
+        using var document = new PdfDocument();
+        var page = document.AddPage();
+        page.SetFontAndSize(document.GetFont("Helvetica"), 12);
+        page.BeginText();
+
+        Assert.Equal(HaruStatus.OK,
+            page.TextRect(10, 100, 140, 40, "center aligned words", PdfTextAlignment.Center, out var centerLength));
+        Assert.True(centerLength > 0);
+
+        Assert.Equal(HaruStatus.OK,
+            page.TextRect(10, 100, 140, 40, "right aligned words", PdfTextAlignment.Right, out var rightLength));
+        Assert.True(rightLength > 0);
+
+        Assert.Equal(HaruStatus.PageInsufficientSpace,
+            page.TextRect(10, 20, 12, 10, "too-wide", PdfTextAlignment.Left, out _));
+        Assert.Equal(HaruStatus.PageInsufficientSpace,
+            page.TextRect(10, 20, 140, 19, "too tall", PdfTextAlignment.Left, out _));
+
+        page.EndText();
+    }
+
+    [Fact]
+    public void SlideShowAndArc_CoverAdditionalValidPaths()
+    {
+        using var document = new PdfDocument();
+        var page = document.AddPage();
+
+        page.SetSlideShow(PdfTransitionStyle.WipeRight, 1, 0.5);
+        page.SetSlideShow(PdfTransitionStyle.Dissolve, 2, 0.25);
+        page.Arc(100, 100, 25, -45, 180);
+        page.Stroke();
+
+        TestHelpers.AssertPdf(document.SaveToStream());
     }
 
     [Fact]

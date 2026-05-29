@@ -182,8 +182,148 @@ public sealed class HPdfCompatibilityTests
         Assert.Equal(HaruStatus.OK, HPdf.HPDF_ReadFromStream(pdf, buffer, ref size));
         Assert.Equal(5u, size);
         Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        Assert.Equal(bytes, HPdf.HPDF_GetContents(pdf));
+
+        size = 6;
+        TestHelpers.AssertHaruException(HaruStatus.InvalidParameter,
+            () => HPdf.HPDF_ReadFromStream(pdf, new byte[1], ref size));
+        pdf.ResetError();
 
         TestHelpers.AssertHaruException(HaruStatus.InvalidParameter,
             () => HPdf.HPDF_ReadFromStream(pdf, null!, ref size));
+        pdf.ResetError();
+
+        HPdf.HPDF_ResetStream(pdf);
+
+        Assert.Equal(0u, HPdf.HPDF_GetStreamSize(pdf));
+    }
+
+    [Fact]
+    public void AdditionalDocumentFontAndImageWrappers_MapToPublicOperations()
+    {
+        var userData = new object();
+        var handlerCalls = new List<(uint ErrorNo, object? UserData)>();
+        using var pdf = HPdf.HPDF_New();
+
+        Assert.Equal(HaruStatus.OK,
+            HPdf.HPDF_SetErrorHandler(pdf, (errorNo, _, data) => handlerCalls.Add((errorNo, data)), userData));
+
+        var error = new HaruError((errorNo, _, data) => handlerCalls.Add((errorNo, data)), userData);
+        error.SetError(HaruStatus.InvalidParameter);
+
+        Assert.Equal(HaruStatus.InvalidParameter, HPdf.HPDF_CheckError(error));
+        Assert.Contains(handlerCalls,
+            call => call.ErrorNo == HaruStatus.InvalidParameter && ReferenceEquals(call.UserData, userData));
+
+        var first = HPdf.HPDF_AddPage(pdf);
+        var inserted = HPdf.HPDF_InsertPage(pdf, first);
+
+        Assert.Same(inserted, HPdf.HPDF_GetPageByIndex(pdf, 0));
+
+        var font = HPdf.HPDF_GetFont(pdf, "Helvetica");
+
+        Assert.True(HPdf.HPDF_Font_GetDescent(font) < 0);
+        Assert.True(HPdf.HPDF_Font_GetXHeight(font) > 0);
+        Assert.True(HPdf.HPDF_Font_GetCapHeight(font) > 0);
+
+        var javaScriptPath = TestHelpers.NewArtifactPath("script.js");
+        File.WriteAllText(javaScriptPath, "app.alert('loaded');");
+        var javaScript = HPdf.HPDF_LoadJSFromFile(pdf, javaScriptPath);
+
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_AddNamedJavaScript(pdf, "loaded", javaScript));
+
+        var u3dPath = TestHelpers.NewArtifactPath("model.u3d");
+        File.WriteAllBytes(u3dPath, [1, 2, 3, 4]);
+
+        Assert.NotNull(HPdf.HPDF_LoadU3DFromFile(pdf, u3dPath));
+
+        var rawImagePath = TestHelpers.NewArtifactPath("rgb.raw");
+        File.WriteAllBytes(rawImagePath, [255, 0, 0]);
+        var rawImage = HPdf.HPDF_LoadRawImageFromFile(pdf, rawImagePath, 1, 1, PdfColorSpace.DeviceRgb);
+        var jpeg = HPdf.HPDF_LoadJpegImageFromMem(pdf, TestHelpers.MinimalJpeg());
+
+        Assert.Equal(PdfColorSpace.DeviceRgb, rawImage.ColorSpace);
+        Assert.Equal(PdfColorSpace.DeviceRgb, jpeg.ColorSpace);
+
+        var fontPath = TestHelpers.RepoPath("LibHaru.SmokeTests", "fixtures", "fonts", "AguafinaScript-Regular.ttf");
+        var secondFontPath = TestHelpers.RepoPath("LibHaru.SmokeTests", "fixtures", "fonts", "Akronim-Regular.ttf");
+
+        Assert.True(File.Exists(fontPath), fontPath);
+        Assert.True(File.Exists(secondFontPath), secondFontPath);
+
+        using var fontPdf = HPdf.HPDF_New();
+
+        Assert.False(string.IsNullOrWhiteSpace(HPdf.HPDF_LoadTTFontFromFile2(fontPdf, fontPath, 0, false)));
+        Assert.False(string.IsNullOrWhiteSpace(
+            HPdf.HPDF_LoadTTFontFromMemory(fontPdf, File.ReadAllBytes(secondFontPath), false)));
+
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_SetPDFAConformance(pdf, PdfPdfAType.PdfA3B));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_AddPDFAXmpExtension(pdf, "<pdfaExtension:schemas/>"));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_SetPassword(pdf, "owner", "user"));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_SetPermission(pdf, (uint)Permission.EnableCopy));
+
+        TestHelpers.AssertHaruException(HaruStatus.InvalidParameter,
+            () => HPdf.HPDF_AddPageLabel(pdf, uint.MaxValue, PdfPageNumStyle.Decimal));
+    }
+
+    [Fact]
+    public void AdditionalPageDestinationAndAnnotationWrappers_MapToPublicOperations()
+    {
+        using var pdf = HPdf.HPDF_New();
+        var page = HPdf.HPDF_AddPage(pdf);
+        var font = HPdf.HPDF_GetFont(pdf, "Helvetica");
+
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_SetFontAndSize(page, font, 12));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_BeginText(page));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_MoveTextPos(page, 20, 120));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_SetTextLeading(page, 14));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_MoveToNextLine(page));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_SetTextRaise(page, 2));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_GetCurrentTextPos2(page, out var textPos));
+        Assert.True(textPos.Y < 120);
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_EndText(page));
+
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_MoveTo(page, 10, 10));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_LineTo(page, 20, 20));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_ClosePath(page));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_MoveTo(page, 30, 30));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_LineTo(page, 40, 40));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_ClosePathStroke(page));
+
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_SetDash(page, null, 0, 0));
+        Assert.Empty(HPdf.HPDF_Page_GetDash(page).Pattern);
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_SetDash(page, [4d, 2d], 1));
+        Assert.Equal(new[] { 4d, 2d }, HPdf.HPDF_Page_GetDash(page).Pattern);
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Page_New_Content_Stream(page, out var contentStream));
+        Assert.NotNull(contentStream);
+
+        var destination = HPdf.HPDF_Page_CreateDestination(page);
+
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Destination_SetFitBV(destination, 25));
+
+        var rect = new PdfRect(10, 10, 40, 30);
+        var annotation = HPdf.HPDF_Page_CreateTextAnnot(page, rect, "colors");
+
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Annot_SetCMYKColor(annotation, new PdfCmykColor(0.1, 0.2, 0.3, 0.4)));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Annot_SetGrayColor(annotation, 0.5));
+        Assert.Equal(HaruStatus.OK, HPdf.HPDF_Annot_SetNoColor(annotation));
+
+        using var invalidPdf = HPdf.HPDF_New();
+        var invalidPage = HPdf.HPDF_AddPage(invalidPdf);
+
+        TestHelpers.AssertHaruException(HaruStatus.InvalidParameter,
+            () => HPdf.HPDF_Page_SetDash(invalidPage, null, 1, 0));
+        invalidPdf.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidParameter,
+            () => HPdf.HPDF_Page_SetDash(invalidPage, [1d], 2, 0));
+        invalidPdf.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidImage,
+            () => HPdf.HPDF_LoadRawImageFromMem(invalidPdf, [0], uint.MaxValue, 1, PdfColorSpace.DeviceGray));
+        invalidPdf.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidImage,
+            () => HPdf.HPDF_LoadRawImageFromFile(invalidPdf, "missing.raw", uint.MaxValue, 1, PdfColorSpace.DeviceGray));
+        invalidPdf.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidImage,
+            () => HPdf.HPDF_Image_LoadRaw1BitImageFromMem(invalidPdf, [0], uint.MaxValue, 1, 1, true, true));
     }
 }

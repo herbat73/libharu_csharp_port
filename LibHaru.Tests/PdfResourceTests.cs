@@ -140,6 +140,81 @@ public sealed class PdfResourceTests
     }
 
     [Fact]
+    public void Annotations_CoverAppearanceIntentAndLineEndingVariants()
+    {
+        using var document = new PdfDocument();
+        var page = document.AddPage();
+        var rect = new PdfRect(10, 10, 60, 40);
+        var font = document.GetFont("Helvetica");
+        var image = document.LoadRawImageFromMem([255, 255, 255], 1, 1, PdfColorSpace.DeviceRgb);
+        var xObject = document.CreateXObjectFromImage(page, rect, image, true);
+
+        var square = page.CreateSquareAnnotation(rect, "square");
+        foreach (var intent in new[]
+                 {
+                     PdfAnnotIntent.FreeTextCallout,
+                     PdfAnnotIntent.FreeTextTypeWriter,
+                     PdfAnnotIntent.LineArrow,
+                     PdfAnnotIntent.LineDimension,
+                     PdfAnnotIntent.PolygonCloud,
+                     PdfAnnotIntent.PolyLineDimension,
+                     PdfAnnotIntent.PolygonDimension,
+                     PdfAnnotIntent.StampImage,
+                     PdfAnnotIntent.StampSnapshot
+                 })
+        {
+            square.SetIntent(intent);
+        }
+
+        var link = page.CreateURILinkAnnotation(rect, "https://example.com");
+        link.SetBorderStyle(PdfAnnotBorderStyle.Beveled, 2);
+        link.SetBorderStyle(PdfAnnotBorderStyle.Inset, 2);
+        link.SetBorderStyle(PdfAnnotBorderStyle.Underlined, 2);
+
+        var line = page.CreateLineAnnotation(rect, "line", new PdfPoint(0, 0), new PdfPoint(10, 10));
+        line.SetLineEndingStyle(PdfAnnotLineEndingStyle.Circle, PdfAnnotLineEndingStyle.Diamond);
+        line.SetLineEndingStyle(PdfAnnotLineEndingStyle.Butt, PdfAnnotLineEndingStyle.ReversedOpenArrow);
+        line.SetLineEndingStyle(PdfAnnotLineEndingStyle.ReversedClosedArrow, PdfAnnotLineEndingStyle.Slash);
+
+        square.SetAppearance(
+            PdfAnnotationAppearanceState.Normal,
+            "q /Im1 Do BT /F1 10 Tf ET Q",
+            rect,
+            xObjects: new Dictionary<string, PdfXObject> { ["Im1"] = xObject },
+            fonts: new Dictionary<string, PdfFont> { ["F1"] = font });
+
+        TestHelpers.AssertPdf(document.SaveToStream());
+    }
+
+    [Fact]
+    public void Images_RejectColorMaskMisuseCases()
+    {
+        using var document = new PdfDocument();
+        var rgb = document.LoadRawImageFromMem([255, 0, 0], 1, 1, PdfColorSpace.DeviceRgb);
+        var gray = document.LoadRawImageFromMem([128], 1, 1, PdfColorSpace.DeviceGray);
+        var oneBit = document.LoadRaw1BitImageFromMem([0b1000_0000], 1, 1, 1, true, true);
+        var maskTarget = document.LoadRawImageFromMem([0, 0, 0], 1, 1, PdfColorSpace.DeviceRgb);
+
+        TestHelpers.AssertHaruException(HaruStatus.InvalidColorSpace,
+            () => gray.SetColorMask(0, 255, 0, 255, 0, 255));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidBitPerComponent,
+            () => oneBit.SetColorMask(0, 255, 0, 255, 0, 255));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidParameter,
+            () => rgb.SetColorMask(255, 0, 0, 255, 0, 255));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidBitPerComponent,
+            () => maskTarget.SetMaskImage(rgb));
+        document.ResetError();
+
+        rgb.SetMaskImage(oneBit);
+
+        TestHelpers.AssertHaruException(HaruStatus.InvalidOperation,
+            () => oneBit.SetColorMask(0, 255, 0, 255, 0, 255));
+    }
+
+    [Fact]
     public void Annotations_RejectUnsupportedSubtypeOperations()
     {
         using var document = new PdfDocument();
@@ -148,8 +223,22 @@ public sealed class PdfResourceTests
 
         TestHelpers.AssertHaruException(HaruStatus.InvalidAnnotation,
             () => text.SetHighlightMode(PdfAnnotHighlightMode.InvertBox));
+        document.ResetError();
         TestHelpers.AssertHaruException(HaruStatus.InvalidAnnotation,
             () => text.SetCalloutLine(new PdfPoint(0, 0), new PdfPoint(1, 1)));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidAnnotation,
+            () => text.SetJavaScript(document.CreateJavaScript("app.alert('wrong subtype');")));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidAnnotation,
+            () => text.SetPopup(null!));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidAnnotation,
+            () => page.CreateURILinkAnnotation(new PdfRect(0, 0, 10, 10), "https://example.com").SetOpened(true));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidColorSpace, () => text.SetGrayColor(2));
+        document.ResetError();
+        TestHelpers.AssertHaruException(HaruStatus.InvalidColorSpace, () => text.SetRGBColor(2, 0, 0));
     }
 
     [Fact]
