@@ -33,4 +33,20 @@ jobs:
         with:
           name: .NET Test Results
           path: 'test-results/*.trx'
-          reporter: dotnet-trx        
+          reporter: dotnet-trx  
+      - name: ReportGenerator
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.7
+        with:
+          reports: './**/coverage.cobertura.xml'
+          targetdir: 'coveragereport'
+          reporttypes: 'MarkdownSummaryGithub;Cobertura;'
+      - name: Add comment to PR 
+        if: github.event_name == 'pull_request'
+        run: gh pr comment $PR_NUMBER --edit-last --create-if-none --body-file coveragereport/SummaryGithub.md 
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}
+      - name: Publish coverage in build summary
+        run: cat coveragereport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY 
+        shell: bash          
+          
